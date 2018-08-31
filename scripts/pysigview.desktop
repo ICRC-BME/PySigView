@@ -1,0 +1,14 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Pysigview
+GenericName=Pysigview
+Comment=Signal viewer for python
+TryExec=sigpy
+Exec=sigpy %F
+Categories=Engineering;Science;IDE;Qt;
+Icon=sigpy
+Terminal=false
+StartupNotify=true
+MimeType=text/x-python;
+X-AppStream-Ignore=True

@@ -1,0 +1,24 @@
+
+language: python
+dist: trusty
+sudo: false
+
+python:
+  - '3.6'
+
+install:
+  - pip install wheel
+  - python setup.py bdist_wheel
+after_success:
+  - pip install twine
+script:
+  - echo "No tests to run"
+    
+deploy:
+  provider: script 
+  script:
+    - python -m twine upload -u cimba -p $TWINE_PASSWORD dist/*.whl
+  skip_cleanup: true
+  on:
+    tags: true
+  
