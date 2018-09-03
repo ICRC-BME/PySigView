@@ -109,6 +109,6 @@ venv.bak/
 # personal resources
 .recources/
 
-# sigpy specific
+# pysigview specific
 iconic_set/
 doc/
