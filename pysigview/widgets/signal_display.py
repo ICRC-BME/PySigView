@@ -366,11 +366,9 @@ class SignalDisplay(QWidget):
         self.subsample()
 
     def on_mouse_wheel(self, event):
-        print(event.type)
 
         # Get x_pos
         x_pos = event.pos[0]
-        print(x_pos)
 
         # Get the zoomed area
 
@@ -532,7 +530,6 @@ class SignalDisplay(QWidget):
     # ----- Display mode switch -----
 
     def switch_display_mode(self, mode):
-        print('---------------Switching display mode!!!!-------------')
         if mode == 0:
             CONF.set(self.CONF_SECTION, 'antialiasing', 'filter')
 
@@ -932,7 +929,6 @@ class SignalDisplay(QWidget):
             stops = uutc_ss[0] <= large_disconts[:, 1]
             in_discont_idx = np.where(starts & stops)[0]
             if len(in_discont_idx):
-                print('in left')
                 in_discont = large_disconts[in_discont_idx][0]
                 uutc_ss[0] = in_discont[1]
                 uutc_ss[1] = uutc_ss[0] + span
@@ -943,7 +939,6 @@ class SignalDisplay(QWidget):
             stops = uutc_ss[1] <= large_disconts[:, 1]
             in_discont_idx = np.where(starts & stops)[0]
             if len(in_discont_idx):
-                print('in right')
                 in_discont = large_disconts[in_discont_idx][0]
                 uutc_ss[1] = in_discont[0]
                 uutc_ss[0] = uutc_ss[1] - span
