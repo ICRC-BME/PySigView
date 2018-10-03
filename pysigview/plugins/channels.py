@@ -392,6 +392,7 @@ class hidden_channels(QListWidget):
         if source == self.parent().visible_channels:
             self.add_drag_items()
             self.visible_channels.remove_drag_items()
+            self.visible_channels.items_removed.emit()
 
     def startDrag(self, supportedActions):
         self.drag_items = self.selectedItems()

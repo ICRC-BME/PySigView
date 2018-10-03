@@ -812,7 +812,7 @@ class SignalDisplay(QWidget):
                     channels.append(o_ch)
                     uutc_ss.append(pc.uutc_ss)
 
-        # FIXME: channels are not being deleted
+        self.data_map.reset_data_map()
         self.data_map.set_channel(np.array(channels),
                                   np.array(uutc_ss))
 
