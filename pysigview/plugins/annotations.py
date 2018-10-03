@@ -166,7 +166,10 @@ class AnnotationList(QTreeWidget):
                 if ch_idx >= 0:
                     ann_set.takeChild(ch_idx)
         else:
+            item.plot_data = False
+            item.plot_set()
             self.takeTopLevelItem(item_idx)
+            self.parent().active_set = None
 
     def get_annotation_items(self):
         annotations = []
