@@ -419,21 +419,23 @@ class MainWindow(QMainWindow):
         if not sm.ODS:
             QMessageBox.warning(self, "Unrecognized file")
             return
-
+        print(self.session_path)
         # Assign session or file path if not already set
-        if ext == '.mefd' and not self.session_path:
-            self.session_path = path
+        if ext == '.mefd' and self.session_path is None:
 
+            print('Checking path')
             # Open a pop-up window to enter password
             passwd, ok = QInputDialog.getText(self, "MEF password",
                                               "Please type MEF password")
             if ok:
+                print('Checking pass')
                 if not sm.ODS.check_password(passwd):
                     QMessageBox.warning(self, "Password incorrect",
                                         "The password is incorrect")
                     return
                 else:
                     sm.ODS.password = passwd
+                    self.session_path = path
             else:
                 return
 
