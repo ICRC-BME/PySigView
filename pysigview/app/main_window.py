@@ -662,9 +662,8 @@ class MainWindow(QMainWindow):
     # ----- Help menu actions
 
     def report_bug(self):
-        webbrowser.open('https://docs.google.com/spreadsheets/d/',
-                        '1WVKBf8P60yyw6ZLUiTYYRyccm-r1OdTBvbxt2W0SK-k/',
-                        'edit?usp=sharing')
+        webbrowser.open('https://github.com/ICRC-BME/PySigView/issues/'
+                        'new?template=bug_report.md')
 
     # ----- Window settings
     def load_window_settings(self, prefix, default=False, section='main'):
