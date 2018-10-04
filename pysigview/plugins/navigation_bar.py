@@ -143,7 +143,7 @@ class BarWidget(QWidget):
         uutc = self.check_uutc(uutc)
         rel_time = uutc - self.recording_start
 
-        pos = rel_time / self.recording_duration
+        pos = rel_time / self.recording_span
 
         return pos
 
@@ -176,9 +176,9 @@ class BarWidget(QWidget):
         pos = np.array([self.uutc_to_pos(x) for x in uutc])
 
         # Check if pos is large enough for at least one pixel
-        one_pixel = self.canvas.central_widget.width / self.recording_span
-        if np.diff(pos) < one_pixel:
-            pos = np.array([pos[0], pos[0]+one_pixel])
+        w = self.canvas.central_widget.width
+        if np.diff(pos) * w < 1:
+            pos = np.array([pos[0], pos[0] + 1 / w])
 
         self.buffer_bar.set_data(pos, self.buffer_carray)
         self.buffer_bar.update()
@@ -192,9 +192,9 @@ class BarWidget(QWidget):
         pos = np.array([self.uutc_to_pos(x) for x in uutc])
 
         # Check if pos is large enough for at least one pixel
-        one_pixel = self.canvas.central_widget.width / self.recording_span
-        if np.diff(pos) < one_pixel:
-            pos = np.array([pos[0], pos[0]+one_pixel])
+        w = self.canvas.central_widget.width
+        if np.diff(pos) * w < 1:
+            pos = np.array([pos[0], pos[0] + 1 / w])
 
         self.view_bar.set_data(pos, self.view_rgba)
         self.view_bar.update()
