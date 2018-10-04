@@ -734,7 +734,7 @@ class SignalDisplay(QWidget):
             proc_stop = self.cong_discontinuities[-1][-1]
             for i in range(len(disconts)):
                 disconts[i] = disconts[i][(disconts[i][:, 0] > proc_start)
-                                          & (disconts[i] < proc_stop)]
+                                          & (disconts[i][:, 1] < proc_stop)]
 
         # Channel with the fewest disconts
         min_disc_ch_idx = np.argmin([len(x) for x in disconts])
