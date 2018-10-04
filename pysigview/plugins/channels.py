@@ -435,6 +435,7 @@ class Channels(BasePluginWidget):
         # Presets for the main window
         self.title = 'Channels'
         self.main = parent
+        self.sd = self.main.signal_display
 
         # Widget layout
         layout = QVBoxLayout()

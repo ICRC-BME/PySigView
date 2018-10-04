@@ -421,7 +421,7 @@ class MainWindow(QMainWindow):
             return
         print(self.session_path)
         # Assign session or file path if not already set
-        if ext == '.mefd' and self.session_path is None:
+        if ext == '.mefd':
 
             # Open a pop-up window to enter password
             passwd, ok = QInputDialog.getText(self, "MEF password",
