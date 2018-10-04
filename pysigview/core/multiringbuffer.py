@@ -23,12 +23,13 @@ from collections import Sequence
 
 # Third party imports
 import numpy as np
+import bcolz as bc
 
 # Local imports
 
 
 class MultiRingBuffer(Sequence):
-    def __init__(self, n_elements, sizes=None, dtype=float):
+    def __init__(self, n_elements, sizes=None, dtype=float, datadir=None):
         """
         Create a new ring buffer with the given number of elements\n
         individual element size and element type
@@ -41,17 +42,29 @@ class MultiRingBuffer(Sequence):
             Size for all elements or list/array with sizes for elements
         dtype: data-type, optional (default=float)
             Data type of the ring buffer
+        datadir: str
+            If specified the data is stored on disk (default=None)
         """
 
         self._arr = np.empty(n_elements, object)
         if isinstance(sizes, (list, np.ndarray)):
             self._sizes = np.array(sizes)
             for i in range(len(self._arr)):
-                self._arr[i] = np.zeros(sizes[i], dtype)
+                if datadir is not None:
+                    self._arr[i] = bc.zeros(int(sizes[i]), dtype,
+                                            rootdir=datadir + '/arr_' + str(i),
+                                            mode='w')
+                else:
+                    self._arr[i] = bc.zeros(int(sizes[i]), dtype)
         elif isinstance(sizes, int):
             self._sizes = np.array([sizes]*len(self._arr))
             for i in range(len(self._arr)):
-                self._arr[i] = np.zeros(sizes, dtype)
+                if datadir is not None:
+                    self._arr[i] = bc.zeros(int(sizes), dtype,
+                                            rootdir=datadir + '/arr_' + str(i),
+                                            mode='w')
+                else:
+                    self._arr[i] = bc.zeros(int(sizes), dtype)
 
         self._dtype = dtype
         self._sizes = np.zeros(n_elements, int)
@@ -159,15 +172,16 @@ class MultiRingBuffer(Sequence):
 
         for e in elements:
 
-            curr_idx = self._indices[e] % self._sizes[e]
+            ci = self._indices[e] % self._sizes[e]
+            size = self._sizes[e]
 
-            new_arr = np.concatenate([self._arr[e][:curr_idx],
-                                      np.zeros(by, self._dtype),
-                                      self._arr[e][curr_idx:]])
-            self._indices[e] = curr_idx + by
+            self._arr[e].resize(size + by)
+            self._arr[e][-(size-ci):] = self._arr[e][ci:size]
+            self._arr[e][ci:size] = 0
+
+            self._indices[e] = ci + by
             self._indices[e] -= int(by * (1 - fb_ratio) + 0.5)
             self._sizes[e] += by
-            self._arr[e] = new_arr
 
     def shrink(self, by, elements=None, fb_ratio=0.5):
         """
@@ -192,33 +206,13 @@ class MultiRingBuffer(Sequence):
 
         for e in elements:
 
-            start_s = int((by * (1 - fb_ratio)) + 0.5)
-            stop_s = self._sizes[e] - int(by * fb_ratio)
-
+            self._indices[e] += int(by * fb_ratio)
             idx_a = self._apply_indices(e)
-            idx_a = idx_a[start_s:stop_s]
 
             self._indices[e] = 0
             self._sizes[e] -= by
-            self._arr[e] = self._arr[e][idx_a]
-
-    def _slice_to_array(self, s, e):
-        if s.start is None:
-            start = 0
-        else:
-            start = s.start
-
-        if s.stop is None:
-            stop = len(self._arr[e])
-        else:
-            stop = s.stop
-
-        if s.step is None:
-            step = 1
-        else:
-            step = s.step
-
-        return slice(start, stop, step)
+            self._arr[e] = self._arr[e][np.r_[idx_a]]
+            self._arr[e].resize(self._sizes[e])
 
     def _apply_indices(self, e, s=None):
 
@@ -226,21 +220,25 @@ class MultiRingBuffer(Sequence):
 
         # Apply indices
         if s is None:
-            s = (self._indices[e] + np.array(range(el))) % el
-            return s
-
-        if isinstance(s, int):
-            s = np.array([s])
+            s = slice(-self._sizes[e] + (self._indices[e] % self._sizes[e]),
+                      self._indices[e] % self._sizes[e], 1)
+        elif isinstance(s, int):
+            s = (self._indices[e] + s) % el
         elif isinstance(s, slice):
-            s = self._slice_to_array(s, e)
-            s = np.array(range(s.start, s.stop, s.step))  # FIXME - inefficient
+            if s.start is None:
+                new_start = self._indices[e]
+            else:
+                new_start = s.start + self._indices[e]
+            if s.stop is None:
+                new_stop = self._sizes[e] + self._indices[e]
+            else:
+                new_stop = s.stop + self._indices[e]
+            if new_stop > self._sizes[e]:
+                new_start = -self._sizes[e]+new_start
+                new_stop = new_stop % self._sizes[e]
+            s = slice(new_start, new_stop, s.step)
         else:
-            s = np.array(s)
-
-        if (np.any(s < 0) | np.any(s >= el)):
-            raise ValueError('index is out of bounds')
-
-        s = (self._indices[e] + s) % el
+            s = (s + self._indices[e]) % self._sizes[e]
 
         return s
 
@@ -248,7 +246,7 @@ class MultiRingBuffer(Sequence):
 
         if s is not None:
             s = self._apply_indices(e, s)
-            self._arr[e][s] = val
+            self._arr[e][np.r_[s]] = val
         else:
             if not isinstance(val, np.ndarray):
                 raise ValueError('Only arrays can be set as elements')
@@ -261,7 +259,7 @@ class MultiRingBuffer(Sequence):
         else:
             s = self._apply_indices(e)
 
-        return self._arr[e][s]
+        return self._arr[e][np.r_[s]]
 
     def __repr__(self):
         return self._arr.__repr__()
