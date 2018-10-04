@@ -909,7 +909,8 @@ class Annotations(BasePluginWidget):
         # Correct for zoom
         rect = sd.camera.rect
         rect_rel_w_pos = rect.left + (rel_w_pos * rect.width)
-        rect_rel_h_pos = rect.bottom + (rel_h_pos * rect.height)
+        # TODO: flip Vispy axis
+        rect_rel_h_pos = 1 - (rect.top - (rel_h_pos * rect.height))
 
         sig_w_pos = rect_rel_w_pos  # TODO - will be different when use columns
         sig_h_pos = (len(sd.get_plot_containers())
