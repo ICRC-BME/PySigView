@@ -856,7 +856,10 @@ class Annotations(BasePluginWidget):
 
     def set_active_set(self, item, column):
 
-        self.active_set = item
+        if isinstance(item, AnnotationSubset):
+            self.active_set = item.parent()
+        else:
+            self.active_set = item
 
     def recieve_input(self, event):
         if event.type == 'key_press' and event.key == 'shift':
