@@ -195,8 +195,7 @@ class PysigviewMultiRingBuffer():
                         * self._fs[e])
                 step = ((t_ss.step / 1e6)
                         * self._fs[e])
-                # OPTIMIZE - this is memory inefficient
-                samps[i] = np.arange(start, stop, step, dtype=int)
+                samps[i] = slice(int(start), int(stop), int(step))
 
         elif isinstance(t_ss, np.ndarray):
             samps = np.zeros(len(elements), object)
@@ -223,8 +222,7 @@ class PysigviewMultiRingBuffer():
                             * self._fs[e])
                     step = ((ts.step / 1e6)
                             * self._fs[e])
-                    # OPTIMIZE - this is memory inefficient
-                    samps[i] = np.arange(start, stop, step, dtype=int)
+                    samps[i] = slice(int(start), int(stop), int(step))
 
         return (elements, samps)
 
@@ -254,6 +252,7 @@ class PysigviewMultiRingBuffer():
 
         # Assign one array to one element
         if isinstance(s, (int, slice, list, np.ndarray)):
+            print('Setting to rolling buffer')
             self._mrb[s] = val
             return
 

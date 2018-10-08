@@ -122,6 +122,8 @@ def fill_roll_buffer(proxy_sd, stop_event, proc_lock,
                     load_dm['uutc_ss'][:, 1] = ring_ss[1]
 
                 data = sm.ODS.get_data(load_dm)
+                
+                print('Data loaded')
 
                 # Determine the channels and times
                 channels = np.where(load_dm['ch_set'])[0]
@@ -385,6 +387,7 @@ class MemoryBuffer(BufferDataSource, QObject):
 
     def download_proxy(self):
 
+        # FIX ME - THIS IS BULLSHIT - I AM SENDING DATA BACK AND FORTH!!!
         self.srb = self.proxy_sd['srb']
         self.chunk_size = self.proxy_sd['chunk_size']
         self.data_map = self.proxy_sd['data_map']

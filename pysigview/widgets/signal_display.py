@@ -982,8 +982,8 @@ class SignalDisplay(QWidget):
         # This check whether provider data source is a buffer
         if getattr(sm.PDS, "is_available", None):
             while not sm.PDS.is_available(self.data_map):
-                print('Checking availability')
-                sleep(1)
+#                print('Checking availability')
+                sleep(0.1)
                 continue
 
         self.data_array = sm.PDS.get_data(self.data_map)

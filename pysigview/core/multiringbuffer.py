@@ -27,6 +27,8 @@ import bcolz as bc
 
 # Local imports
 
+#bc.cparams.setdefaults(clevel=0, shuffle=None, cname=None, quantize=None)
+
 
 class MultiRingBuffer(Sequence):
     def __init__(self, n_elements, sizes=None, dtype=float, datadir=None):
@@ -228,14 +230,13 @@ class MultiRingBuffer(Sequence):
             if s.start is None:
                 new_start = self._indices[e]
             else:
-                new_start = s.start + self._indices[e]
+                new_start = (s.start + self._indices[e]) % self._sizes[e]
             if s.stop is None:
                 new_stop = self._sizes[e] + self._indices[e]
             else:
-                new_stop = s.stop + self._indices[e]
-            if new_stop > self._sizes[e]:
-                new_start = -self._sizes[e]+new_start
-                new_stop = new_stop % self._sizes[e]
+                new_stop = (s.stop + self._indices[e]) % self._sizes[e]
+            if new_stop < new_start:
+                new_start = -self._sizes[e] + new_start
             s = slice(new_start, new_stop, s.step)
         else:
             s = (s + self._indices[e]) % self._sizes[e]
@@ -246,7 +247,12 @@ class MultiRingBuffer(Sequence):
 
         if s is not None:
             s = self._apply_indices(e, s)
-            self._arr[e][np.r_[s]] = val
+            print(s)
+            if isinstance(s, slice) and s.start < 0:
+                self._arr[e][s.start:] = val[:-s.start]
+                self._arr[e][:s.stop] = val[-s.start:]
+            else:
+                self._arr[e][s] = val
         else:
             if not isinstance(val, np.ndarray):
                 raise ValueError('Only arrays can be set as elements')
