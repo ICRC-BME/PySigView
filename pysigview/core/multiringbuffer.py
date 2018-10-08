@@ -211,9 +211,18 @@ class MultiRingBuffer(Sequence):
             self._indices[e] += int(by * fb_ratio)
             idx_a = self._apply_indices(e)
 
+            print(idx_a)
+
             self._indices[e] = 0
             self._sizes[e] -= by
-            self._arr[e] = self._arr[e][np.r_[idx_a]]
+
+            if isinstance(idx_a, slice) and idx_a.start < 0:
+                temp_arr = self._arr[e][idx_a.start:]
+                self._arr[e][-idx_a.start:] = self._arr[e][:idx_a.stop]
+                self._arr[e][:-idx_a.start] = temp_arr
+            else:
+                self._arr[e][idx_a] = self._arr[e][idx_a]
+
             self._arr[e].resize(self._sizes[e])
 
     def _apply_indices(self, e, s=None):
@@ -247,7 +256,6 @@ class MultiRingBuffer(Sequence):
 
         if s is not None:
             s = self._apply_indices(e, s)
-            print(s)
             if isinstance(s, slice) and s.start < 0:
                 self._arr[e][s.start:] = val[:-s.start]
                 self._arr[e][:s.stop] = val[-s.start:]
