@@ -248,6 +248,7 @@ class BarWidget(QWidget):
         # Calculate the relative position in recording
         rel_pos = x_pos / self.nav_view.size[0]
         midpoint = self.recording_start + (rel_pos * self.recording_span)
+        midpoint = self.parent().tools_widget._correct_time(midpoint)
 
         self.main.signal_display.move_to_time(midpoint)
 
@@ -304,6 +305,14 @@ class ToolsWidget(QWidget):
         layout.addWidget(self.span_le)
         self.setLayout(layout)
 
+    def _correct_time(self, uutc):
+        # Get maximum sampling frequency
+        fsamps = [pc.fsamp for pc in
+                  self.main.signal_display.get_plot_containers()]
+        min_step = 1e6 / np.max(fsamps)
+
+        return int(uutc // min_step * min_step)
+
     def uutc_to_date(self, uutc):
 
         dt_str = datetime.fromtimestamp(uutc/1e6
@@ -331,6 +340,7 @@ class ToolsWidget(QWidget):
 
         span = (tracker[1]-tracker[0])/1e6
         loc = int(tracker[0])
+        loc = self._correct_time(loc)
         if self.radio_to_date.isChecked():
             loc_str = self.uutc_to_date(loc)
         else:
@@ -370,6 +380,15 @@ class ToolsWidget(QWidget):
             midpoint = self.date_to_uutc(self.location_le.text())
         else:
             midpoint = int(self.location_le.text())
+
+        midpoint = self._correct_time(midpoint)
+
+        if self.radio_to_date.isChecked():
+            loc_str = self.uutc_to_date(midpoint)
+        else:
+            loc_str = str(midpoint)
+        self.location_le.setText(loc_str)
+
         self.main.signal_display.move_to_time(midpoint)
 
     def span_format_check(self, text):
