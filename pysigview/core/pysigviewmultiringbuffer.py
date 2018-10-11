@@ -131,6 +131,9 @@ class PysigviewMultiRingBuffer():
             self._uutc_ss[elements, 0] += int((by * (1-fb_ratio)) + 0.5)
             self._uutc_ss[elements, 1] -= int((by * fb_ratio) + 0.5)
 
+    def purge_data(self):
+        self._mrb.purge_data()
+
     def _create_full_slice(self, s, e):
         if s.start is None:
             start = self._uutc_ss[e][0]
