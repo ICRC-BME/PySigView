@@ -28,9 +28,9 @@ from pysigview.core.multiringbuffer import MultiRingBuffer
 class PysigviewMultiRingBuffer():
 
     def __init__(self, n_elements, sizes=None, dtype=float,
-                 uutc_ss=None, fs=None):
+                 uutc_ss=None, fs=None, datadir=None):
 
-        self._mrb = MultiRingBuffer(n_elements, sizes, dtype)
+        self._mrb = MultiRingBuffer(n_elements, sizes, dtype, datadir)
 
         if isinstance(fs, (int, float)):
             self._fs = np.zeros(n_elements, float) + fs
@@ -252,7 +252,6 @@ class PysigviewMultiRingBuffer():
 
         # Assign one array to one element
         if isinstance(s, (int, slice, list, np.ndarray)):
-            print('Setting to rolling buffer')
             self._mrb[s] = val
             return
 

@@ -265,6 +265,8 @@ class MultiRingBuffer(Sequence):
             if not isinstance(val, np.ndarray):
                 raise ValueError('Only arrays can be set as elements')
             self._arr[e] = val
+            
+        self._arr[e].flush()
 
     def _get_element(self, e, s=None):
 
