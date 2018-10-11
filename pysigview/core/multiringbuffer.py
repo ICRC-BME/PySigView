@@ -270,10 +270,14 @@ class MultiRingBuffer(Sequence):
 
         if s is not None:
             s = self._apply_indices(e, s)
+            if isinstance(s, slice) and s.start < 0:
+                return np.hstack([self._arr[e][s.start:],
+                                  self._arr[e][:s.stop]])
+            else:
+                return self._arr[e][s]
         else:
             s = self._apply_indices(e)
-
-        return self._arr[e][np.r_[s]]
+            return self._arr[e][s]
 
     def __repr__(self):
         return self._arr.__repr__()
