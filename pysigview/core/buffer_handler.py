@@ -29,12 +29,13 @@ United States
 from multiprocessing import Process, Manager, Lock, Event as pEvent
 from threading import Event as tEvent
 from threading import Thread
+from time import time
+from tempfile import gettempdir
 
 # import tempfile - this will be used with bcolz
 
 # Third party imports
 import numpy as np
-# TODO: import bcolz
 from PyQt5.QtCore import pyqtSignal, QObject
 
 # Local imports
@@ -45,8 +46,6 @@ from pysigview.core.pysigviewmultiringbuffer import PysigviewMultiRingBuffer
 
 def fill_roll_buffer(proxy_sd, stop_event, proc_lock,
                      chunks_before, chunks_after):
-
-    print('Fill and roll launched')
 
     # Some recording info
     rec_start = sm.ODS.recording_info['recording_start']
@@ -102,29 +101,22 @@ def fill_roll_buffer(proxy_sd, stop_event, proc_lock,
         # ----- Buffer filling -----
         buffer_filled = np.diff(buffer_ss)[0] == buff_size
 
-        # OPTIMIZE - the filling section below duplicates code
-
         if not buffer_filled:
 
             # ----- Forward direction -----
-
-            download_proxy()  # OPTIMIZE: is this needed?
 
             load_dm['uutc_ss'][:, 0] = buffer_ss[1]
             load_dm['uutc_ss'][:, 1] = buffer_ss[1] + subp_sd['chunk_size']
             load_ss = load_dm.get_active_largest_ss()
 
-            # Is load data map is beyond the ring buffer?
+            # Is load data map beyond the ring buffer?
             if not load_ss[0] >= ring_ss[1]:
-                print('---- Forward filling -----')
                 # Is only part of load data map is beyond the buffer?
                 if load_ss[1] > ring_ss[1]:
                     load_dm['uutc_ss'][:, 1] = ring_ss[1]
 
                 data = sm.ODS.get_data(load_dm)
                 
-                print('Data loaded')
-
                 # Determine the channels and times
                 channels = np.where(load_dm['ch_set'])[0]
                 uutc_ss = load_dm.get_active_largest_ss()
@@ -141,15 +133,12 @@ def fill_roll_buffer(proxy_sd, stop_event, proc_lock,
 
             # ----- Backward direction -----
 
-            download_proxy()  # OPTIMIZE: is this needed?
-
             load_dm['uutc_ss'][:, 0] = buffer_ss[0] - subp_sd['chunk_size']
             load_dm['uutc_ss'][:, 1] = buffer_ss[0]
             load_ss = load_dm.get_active_largest_ss()
 
-            # Is load data map is beyond the ring buffer?
+            # Is load data map beyond the ring buffer?
             if not load_ss[1] <= ring_ss[0]:
-                print('---- Backward filling -----')
                 # Is only part of load data map is beyond the buffer?
                 if load_ss[0] < ring_ss[0]:
                     load_dm['uutc_ss'][:, 0] = ring_ss[0]
@@ -189,10 +178,6 @@ def fill_roll_buffer(proxy_sd, stop_event, proc_lock,
 
         if midpoint_diff > 0 and buffer_ss[1] < rec_end:
 
-            print('----- Rolling the buffer forward -----')
-            print('\t midpoint_diff = ', midpoint_diff)
-            print('\t buffer_ss = ', buffer_ss)
-
             # Determine the loadmap
             load_dm['uutc_ss'][:, 0] = buffer_ss[1]
             load_dm['uutc_ss'][:, 1] = buffer_ss[1] + midpoint_diff
@@ -213,10 +198,6 @@ def fill_roll_buffer(proxy_sd, stop_event, proc_lock,
             proc_lock.release()
 
         elif midpoint_diff < 0 and buffer_ss[0] > rec_start:
-
-            print('----- Rolling the buffer backward -----')
-            print('\t midpoint_diff = ', midpoint_diff)
-            print('\t buffer_ss = ', buffer_ss)
 
             # Determine the loadmap
             load_dm['uutc_ss'][:, 1] = buffer_ss[0]
@@ -262,8 +243,9 @@ class MemoryBuffer(BufferDataSource, QObject):
 
         self.chunk_size = int(10*1e6)  # Will be at CONF
         self.N_chunks_before = 1  # Will be at CONF
-        self.N_chunks_after = 1  # Will be at CONF
+        self.N_chunks_after = 10  # Will be at CONF
         self.N_chunks = self.N_chunks_before + self.N_chunks_after + 1
+        self.use_disk = True
 
         # ----- Buffer process -----
 
@@ -289,22 +271,19 @@ class MemoryBuffer(BufferDataSource, QObject):
         self.thread_stop.set()
         self.monitor_thread.join()
         return
+    
+    def purge_data(self):
+        self.proxy_sd['srb'].purge_data()
 
     def start_new_buffer(self):
         """
         Starts new buffering process. And kills the previous one.
         """
 
-        print('-----Starting new buffer-----')
-
         # This should finish the process
         if self.buffer_process:
-            print('Waiting for previous buffer to terminate')
             self.terminate_buffer()
-            print('DONE')
-            print('Waiting for monitor thread to terminate')
             self.terminate_monitor_thread()
-            print('DONE')
 
         # Create new process and start it
         self.buffer_stop = pEvent()  # Event to kill the buffer process
@@ -318,18 +297,13 @@ class MemoryBuffer(BufferDataSource, QObject):
                                             self.N_chunks_after),
                                       daemon=True)
         self.buffer_process.start()
-        print('New process launched')
 
-        print('Starting new monitor thread')
         self.thread_stop = tEvent()
         self.monitor_thread = Thread(target=self.monitor_buffer,
                                      daemon=True)
         self.monitor_thread.start()
-        print('Monitor thread launched')
 
     def setup_buffer_vars(self):
-
-        print('-----Setting up buffer variables-----')
 
         n_elem = len(self.data_map)
 
@@ -345,8 +319,6 @@ class MemoryBuffer(BufferDataSource, QObject):
         uutc_ss[0] -= int(self.N_chunks_before * self.chunk_size)
         uutc_ss[1] += int((self.N_chunks_after + 1) * self.chunk_size)
 
-        print('UUTC_ss before', uutc_ss)
-
         # Recording start/stop
         if uutc_ss[0] < self.rec_start:
             uutc_diff = self.rec_start - uutc_ss[0]
@@ -359,35 +331,29 @@ class MemoryBuffer(BufferDataSource, QObject):
 
         sizes = (np.ones(n_elem)*fsamps*np.diff(uutc_ss)/1e6).astype('int64')
 
-        print('Elements', n_elem)
-        print('Fsamps', fsamps)
-        print('Sizes', sizes)
-        print('UUTC_ss', uutc_ss)
+        if self.use_disk:
+            datadir = gettempdir()
+        else:
+            datadir = None
 
-        self.srb = PysigviewMultiRingBuffer(n_elem,
-                                            sizes,
-                                            uutc_ss=uutc_ss,
-                                            fs=fsamps)
+        self.srb = PysigviewMultiRingBuffer(n_elem, sizes, float, uutc_ss,
+                                            fsamps, datadir)
 
         self.upload_proxy()
 
     def monitor_buffer(self):
         prev_ss = self.proxy_sd['data_map'].get_active_largest_ss()
-        print('Monitor buffer launched')
         while True:
             if self.thread_stop.is_set():
                 return
             prox_ss = self.proxy_sd['data_map'].get_active_largest_ss()
             if np.any(prev_ss != prox_ss):
-                print('State has changed!!!')
                 self.download_proxy()
                 self.state_changed.emit()
-                print('Signal emmited')
                 prev_ss = self.proxy_sd['data_map'].get_active_largest_ss()
 
     def download_proxy(self):
 
-        # FIX ME - THIS IS BULLSHIT - I AM SENDING DATA BACK AND FORTH!!!
         self.srb = self.proxy_sd['srb']
         self.chunk_size = self.proxy_sd['chunk_size']
         self.data_map = self.proxy_sd['data_map']
@@ -404,8 +370,6 @@ class MemoryBuffer(BufferDataSource, QObject):
         Function to update the ring buffer, alternatively start new process
         """
 
-        print('\n----- Inside update function -----')
-        print(view_dm.get_active_channels())
         self.buffer_lock.acquire()
 
         self.download_proxy()
@@ -414,7 +378,6 @@ class MemoryBuffer(BufferDataSource, QObject):
 
         # ----- Tackling the channel changes -----
         if np.any(self.data_map['ch_set'] != view_dm['ch_set']):
-            print('Internal buffer - channel map has changed')
 
             # Find the changed channels
             changed_chans = (self.data_map['ch_set']
@@ -428,18 +391,10 @@ class MemoryBuffer(BufferDataSource, QObject):
             # Add channels
             self.data_map['ch_set'][added_chans] = True
 
-            print('Updated data map set channels in main process')
-            print(self.data_map.get_active_channels())
-            print('Updated data map set uutc')
-            print(self.data_map.get_active_uutc_ss())
-
-#            self.data_map['uutc_ss'][:] = self.curr_view_times[0]
             self.current_view_dm = view_dm
             self.buffer_lock.release()
             self.start_new_buffer()
             return
-
-        print('Passed channel changes')
 
         # ----- Tackling the time changes -----
         new_chunk_size = np.diff(self.curr_view_times)
@@ -451,7 +406,6 @@ class MemoryBuffer(BufferDataSource, QObject):
 
         # Shrink & enlarge
         if chunk_diff < 0:
-            print('\tWas shrunk')
             self.chunk_size = new_chunk_size
             if self._is_in_buffer(view_dm):
 
@@ -463,7 +417,6 @@ class MemoryBuffer(BufferDataSource, QObject):
                 # Check if we are before the rec start
                 if new_back_point < self.rec_start:
                     add_to_front = self.rec_start - new_back_point
-                    print('Adding to front', add_to_front)
                     new_back_point = self.rec_start
                 else:
                     add_to_front = 0
@@ -471,7 +424,6 @@ class MemoryBuffer(BufferDataSource, QObject):
                 # Check if we are before the rec stop
                 if new_front_point > self.rec_end:
                     add_to_back = new_front_point - self.rec_end
-                    print('Adding to back', add_to_back)
                     new_front_point = self.rec_end
                 else:
                     add_to_back = 0
@@ -491,15 +443,12 @@ class MemoryBuffer(BufferDataSource, QObject):
                 self._shirnk_data_map(-chunk_diff*self.N_chunks, fb_ratio)
 
             else:
-                print('\t\tData not loaded yet')
-                # self.data_map['uutc_ss'][:] = self.curr_view_times[0]
                 self.buffer_lock.release()
                 self.start_new_buffer()
                 return
 
         # Enlarge
         elif chunk_diff > 0:
-            print('\tWas enlarged')
             self.chunk_size = new_chunk_size
             if self._is_in_buffer(view_dm):
 
@@ -511,7 +460,6 @@ class MemoryBuffer(BufferDataSource, QObject):
                 # Check if we are before the rec start
                 if new_back_point < self.rec_start:
                     add_to_front = self.rec_start - new_back_point
-                    print('Adding to front', add_to_front)
                     new_back_point = self.rec_start
                 else:
                     add_to_front = 0
@@ -519,7 +467,6 @@ class MemoryBuffer(BufferDataSource, QObject):
                 # Check if we are before the rec stop
                 if new_front_point > self.rec_end:
                     add_to_back = new_front_point - self.rec_end
-                    print('Adding to back', add_to_back)
                     new_front_point = self.rec_end
                 else:
                     add_to_back = 0
@@ -527,28 +474,15 @@ class MemoryBuffer(BufferDataSource, QObject):
                 dm_ss = self.data_map.get_active_largest_ss()
                 front_portion = dm_ss[1] - new_front_point
                 back_portion = new_back_point - dm_ss[0]
-#
-#                print('Front portion',front_portion/1e6)
-#                print('Back portion',back_portion/1e6)
-#
+
                 front_portion += add_to_front
                 back_portion += add_to_back
 
-#                print('Front portion after adj',front_portion/1e6)
-#                print('Back portion after adj',back_portion/1e6)
-
                 fb_ratio = front_portion / (front_portion + back_portion)
-
-                # TODO - rec start and stop case
-                fb_ratioo = (self.N_chunks_after + 0.5) / self.N_chunks
-
-                print('New FB ratio', fb_ratio)
-                print('Old FB ratio', fb_ratioo)
 
                 self.srb.enlarge(chunk_diff*self.N_chunks,
                                  fb_ratio=fb_ratio)
             else:
-                print('\t\tData not loaded yet')
                 self.buffer_lock.release()
                 self.start_new_buffer()
                 return
@@ -559,8 +493,6 @@ class MemoryBuffer(BufferDataSource, QObject):
                 self.buffer_lock.release()
                 self.start_new_buffer()
                 return
-
-        print('Passed time changes')
 
         self.current_view_dm = view_dm
 
@@ -597,9 +529,13 @@ class MemoryBuffer(BufferDataSource, QObject):
     # ----- DataSource API -----
 
     def get_data(self, req_data_map):
-
-        self.srb = self.proxy_sd['srb']
-
+        
+        t = time()
+                
+        print('Proxy sync in',time()-t)
+        
+        t = time()
+        
         read_ch_idcs = np.where(self.data_map['ch_set'])[0]
         uutc_ss = req_data_map['uutc_ss'][read_ch_idcs]
         obj_uutc_ss = np.empty(len(read_ch_idcs), 'object')
@@ -607,6 +543,16 @@ class MemoryBuffer(BufferDataSource, QObject):
             obj_uutc_ss[i] = slice(uutc_ss[i][0], uutc_ss[i][1])
 
         data_out = np.empty(len(self.data_map), object)
-        data_out[read_ch_idcs] = self.srb[read_ch_idcs, obj_uutc_ss]
+        for i in range(len(data_out)):
+            data_out[i] = np.array([], dtype='float32')
+            
+        print('Array and indices preparation',time()-t)
+                     
+        t = time()
+            
+        data_out[read_ch_idcs] = self.proxy_sd['srb'][read_ch_idcs,
+                                                      obj_uutc_ss]
+
+        print('Data from ring buffer in',time()-t)
 
         return data_out
