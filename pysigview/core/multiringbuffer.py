@@ -213,8 +213,6 @@ class MultiRingBuffer(Sequence):
             self._indices[e] += int(by * fb_ratio)
             idx_a = self._apply_indices(e)
 
-            print(idx_a)
-
             self._indices[e] = 0
             self._sizes[e] -= by
 
@@ -226,6 +224,7 @@ class MultiRingBuffer(Sequence):
                 self._arr[e][idx_a] = self._arr[e][idx_a]
 
             self._arr[e].resize(self._sizes[e])
+            
             self._arr[e].flush()
 
     def purge_data(self):
