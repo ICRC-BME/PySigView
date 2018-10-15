@@ -17,13 +17,12 @@ United States
 """
 
 # Std imports
-import os
 
 # Third pary imports
 import numpy as np
 import pandas as pd
 
-from pymef import read_ts_channels_uutc, get_toc
+from pymef import read_ts_channels_uutc, get_toc, check_password
 from pymef import pymef3_file
 
 # Local imports
@@ -39,18 +38,13 @@ class mefdHandler(FileDataSource):
 
         self.session_md = None
 
-    def check_password(self, password):
+    def password_check(self, password):
 
-        # Get one .tdat file and test it (shuold the C function do this?)
-        for root, subfolds, files in os.walk(self._path):
-            if len([x for x in files if '.tdat' in x]):
-                tdat_file = [x for x in files if '.tdat' in x][0]
-                break
-
-        if pymef3_file.check_mef_password(root+'/'+tdat_file, password) < 0:
-            return False
-        else:
+        try:
+            check_password(self._path, password)
             return True
+        except RuntimeError as e:
+            return False
 
     def load_metadata(self):
 

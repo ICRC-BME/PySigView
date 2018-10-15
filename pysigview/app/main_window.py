@@ -427,7 +427,7 @@ class MainWindow(QMainWindow):
             passwd, ok = QInputDialog.getText(self, "MEF password",
                                               "Please type MEF password")
             if ok:
-                if not sm.ODS.check_password(passwd):
+                if not sm.ODS.password_check(passwd):
                     QMessageBox.warning(self, "Password incorrect",
                                         "The password is incorrect")
                     return
