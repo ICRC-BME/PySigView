@@ -54,10 +54,11 @@ DEFAULTS = {'DEFAULTS': {'enable': True
                      },
             'data_management': {'use_memory_buffer': False,
                                 'use_disk_buffer': False,
-                                'memory_buffer/N_win_before': 1,
-                                'memory_buffer/N_win_after': 1
+                                'n_chunks_before': 1,
+                                'n_chunks_after': 1,
+                                'chunk_size': 10
                                 },
-            'signal_display': {'N_cols': 1,
+            'signal_display': {'n_cols': 1,
                                'plot_method': 'gl',  # gl or agg
                                'bgcolor': '#606060ff',
                                'grid_color': '#ffffffff',
@@ -96,7 +97,7 @@ DEFAULTS = {'DEFAULTS': {'enable': True
                           },
             }
 
-CONF_VERSION = '0.3.0'
+CONF_VERSION = '0.4.0'
 
 # Main configuration instance
 try:

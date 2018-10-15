@@ -26,7 +26,8 @@ United States
 """
 
 # Standard library imports
-from multiprocessing import Process, Manager, Lock, Event as pEvent
+from multiprocessing import Process, Lock, Event as pEvent
+from multiprocessing.managers import BaseManager
 from threading import Event as tEvent
 from threading import Thread
 from time import time
@@ -42,6 +43,8 @@ from PyQt5.QtCore import pyqtSignal, QObject
 from pysigview.core import source_manager as sm
 from pysigview.core.source_manager import BufferDataSource
 from pysigview.core.pysigviewmultiringbuffer import PysigviewMultiRingBuffer
+from pysigview.config.main import CONF
+
 
 # =============================================================================
 # Shared class object
@@ -113,9 +116,8 @@ class SharedData:
     def purge_srb(self):
         self.srb.purge_data()
         
-import multiprocessing.managers as m
 
-class SharedDataManager(m.BaseManager):
+class SharedDataManager(BaseManager):
     pass
 
 SharedDataManager.register("SharedData", SharedData)
@@ -304,11 +306,13 @@ class MemoryBuffer(BufferDataSource, QObject):
 
         self.current_view_dm = None
 
-        self.chunk_size = int(10*1e6)  # Will be at CONF
-        self.N_chunks_before = 1  # Will be at CONF
-        self.N_chunks_after = 10  # Will be at CONF
+        
+
+        self.chunk_size = int(CONF.get('data_management', 'chunk_size')*1e6)
+        self.N_chunks_before = CONF.get('data_management', 'n_chunks_before')
+        self.N_chunks_after = CONF.get('data_management', 'n_chunks_after')
         self.N_chunks = self.N_chunks_before + self.N_chunks_after + 1
-        self.use_disk = False
+        self.use_disk = CONF.get('data_management', 'use_disk_buffer')
 
         # ----- Buffer process -----
 
@@ -320,7 +324,7 @@ class MemoryBuffer(BufferDataSource, QObject):
         self.buffer_manager = SharedDataManager()
         self.buffer_manager.start()
         self.shared_data = self.buffer_manager.SharedData()
-        self.shared_data.set_chunk_size(self.chunk_size) # TODO: move this to init
+        self.shared_data.set_chunk_size(self.chunk_size)
         self.shared_data.set_data_map(self.data_map)
 
         self.buffer_stop = None
