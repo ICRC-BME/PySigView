@@ -30,7 +30,6 @@ from multiprocessing import Process, Lock, Event as pEvent
 from multiprocessing.managers import BaseManager
 from threading import Event as tEvent
 from threading import Thread
-from time import time
 from tempfile import gettempdir
 
 # import tempfile - this will be used with bcolz
@@ -56,19 +55,28 @@ class SharedData:
         self.chunk_size = 0
         self.data_map = None
         self.current_view_dm = None
-        
+
     def set_chunk_size(self, chunk_size):
         self.chunk_size = chunk_size
-        
+
     def get_chunk_size(self):
         return self.chunk_size
-        
+
     def set_data_map(self, data_map):
         self.data_map = data_map
-        
+
     def get_data_map(self):
         return self.data_map
-    
+
+    def set_data_map_start(self, uutc):
+        self.data_map['uutc_ss'][:, 0] = uutc
+
+    def set_data_map_stop(self, uutc):
+        self.data_map['uutc_ss'][:, 1] = uutc
+
+    def shift_data_map(self, by):
+        self.data_map['uutc_ss'] += by
+
     def shirnk_data_map(self, by, fb_ratio):
         self.data_map['uutc_ss'][:, 0] += int((by * (1-fb_ratio)) + 0.5)
         self.data_map['uutc_ss'][:, 1] -= int((by * fb_ratio) + 0.5)
@@ -77,48 +85,48 @@ class SharedData:
         self.data_map['uutc_ss'][:, 0] -= int((by * (1-fb_ratio)) + 0.5)
         self.data_map['uutc_ss'][:, 1] += int((by * fb_ratio) + 0.5)
 
-        
     def set_current_view_dm(self, current_view_dm):
         self.current_view_dm = current_view_dm
-        
+
     def get_current_view_dm(self):
         return self.current_view_dm
-    
+
     def set_srb(self, srb):
         self.srb = srb
-        
+
     def get_srb(self):
         return self.srb
-    
+
     def get_srb_start_stop(self):
         return [self.srb.uutc_ss[:, 0].min(), self.srb.uutc_ss[:, 1].max()]
-    
+
     def set_srb_data(self, channels, uutc_ss, data):
         # Check that we are not out of buffer
-        if (uutc_ss[0] < self.srb._uutc_ss[:,0].min()
-            or uutc_ss[1] > self.srb._uutc_ss[:,1].max()):
+        if (uutc_ss[0] < self.srb._uutc_ss[:, 0].min()
+                or uutc_ss[1] > self.srb._uutc_ss[:, 1].max()):
             return
 
         self.srb[channels, uutc_ss[0]:uutc_ss[1]] = data
-        
+
     def get_srb_data(self, channels, uutc_ss):
-        return  self.srb[channels, uutc_ss]
-        
+        return self.srb[channels, uutc_ss]
+
     def roll_srb(self, by):
         self.srb.roll(by)
-        
+
     def shrink_srb(self, by, fb_ratio):
         self.srb.shrink(by, fb_ratio=fb_ratio)
-        
+
     def enlarge_srb(self, by, fb_ratio):
         self.srb.enlarge(by, fb_ratio=fb_ratio)
-        
+
     def purge_srb(self):
         self.srb.purge_data()
-        
+
 
 class SharedDataManager(BaseManager):
     pass
+
 
 SharedDataManager.register("SharedData", SharedData)
 
@@ -126,20 +134,20 @@ SharedDataManager.register("SharedData", SharedData)
 # Buffering function
 # =============================================================================
 
-def fill_roll_buffer(shared_data, stop_event, proc_lock,
+
+def fill_roll_buffer(sd, stop_event, proc_lock,
                      chunks_before, chunks_after):
 
     # Some recording info
     rec_start = sm.ODS.recording_info['recording_start']
     rec_end = sm.ODS.recording_info['recording_end']
 
-    # Variables need for the process 
-    load_dm = shared_data.get_data_map()
-    load_dm['uutc_ss'][:, 1] += shared_data.get_chunk_size()
+    # Variables need for the process
+    load_dm = sd.get_data_map()
+    load_dm['uutc_ss'][:, 1] += sd.get_chunk_size()
     load_ss = load_dm.get_active_largest_ss()
 
     while True:
-
 
         if stop_event.is_set():
             return
@@ -149,9 +157,9 @@ def fill_roll_buffer(shared_data, stop_event, proc_lock,
             continue
 
         buff_size = ((chunks_before + chunks_after + 1)
-                      * shared_data.get_chunk_size())
-        ring_ss = shared_data.get_srb_start_stop()
-        buffer_ss = shared_data.get_data_map().get_active_largest_ss()
+                     * sd.get_chunk_size())
+        ring_ss = sd.get_srb_start_stop()
+        buffer_ss = sd.get_data_map().get_active_largest_ss()
 
         # ----- Buffer filling -----
         buffer_filled = np.diff(buffer_ss)[0] == buff_size
@@ -161,7 +169,7 @@ def fill_roll_buffer(shared_data, stop_event, proc_lock,
             # ----- Forward direction -----
 
             load_dm['uutc_ss'][:, 0] = buffer_ss[1]
-            load_dm['uutc_ss'][:, 1] = buffer_ss[1] + shared_data.get_chunk_size()
+            load_dm['uutc_ss'][:, 1] = buffer_ss[1] + sd.get_chunk_size()
             load_ss = load_dm.get_active_largest_ss()
 
             # Is load data map beyond the ring buffer?
@@ -171,7 +179,7 @@ def fill_roll_buffer(shared_data, stop_event, proc_lock,
                     load_dm['uutc_ss'][:, 1] = ring_ss[1]
 
                 data = sm.ODS.get_data(load_dm)
-                
+
                 # Determine the channels and times
                 channels = np.where(load_dm['ch_set'])[0]
                 uutc_ss = load_dm.get_active_largest_ss()
@@ -179,17 +187,15 @@ def fill_roll_buffer(shared_data, stop_event, proc_lock,
                 # Update shared memory proxies
                 proc_lock.acquire()
 
-                shared_data.set_srb_data(channels, uutc_ss, data[channels])
-                
-                data_map = shared_data.get_data_map()
-                data_map['uutc_ss'][:, 1] = uutc_ss[1]
-                shared_data.set_data_map(data_map)
-                
+                sd.set_srb_data(channels, uutc_ss, data[channels])
+
+                sd.set_data_map_stop(uutc_ss[1])
+
                 proc_lock.release()
 
             # ----- Backward direction -----
 
-            load_dm['uutc_ss'][:, 0] = buffer_ss[0] - shared_data.get_chunk_size()
+            load_dm['uutc_ss'][:, 0] = buffer_ss[0] - sd.get_chunk_size()
             load_dm['uutc_ss'][:, 1] = buffer_ss[0]
             load_ss = load_dm.get_active_largest_ss()
 
@@ -208,29 +214,27 @@ def fill_roll_buffer(shared_data, stop_event, proc_lock,
                 # Update shared memory proxies
                 proc_lock.acquire()
 
-                shared_data.set_srb_data(channels, uutc_ss, data[channels])
-                
-                data_map = shared_data.get_data_map()
-                data_map['uutc_ss'][:, 0] = uutc_ss[0]
-                shared_data.set_data_map(data_map)
-                
+                sd.set_srb_data(channels, uutc_ss, data[channels])
+
+                sd.set_data_map_start(uutc_ss[0])
+
                 proc_lock.release()
 
             continue
 
         # ----- Buffer rolling -----
 
-        if shared_data.get_current_view_dm() is None:
+        if sd.get_current_view_dm() is None:
             continue
 
         # Calculate the non-rolling point
 
-        view_ss = shared_data.get_current_view_dm().get_active_largest_ss()
+        view_ss = sd.get_current_view_dm().get_active_largest_ss()
 
         # Determine the nonroling point
 
-        nonr_ss = [buffer_ss[0] + chunks_before * shared_data.get_chunk_size(),
-                   buffer_ss[0] + (chunks_before + 1) * shared_data.get_chunk_size()]
+        nonr_ss = [buffer_ss[0] + chunks_before * sd.get_chunk_size(),
+                   buffer_ss[0] + (chunks_before + 1) * sd.get_chunk_size()]
 
         midpoint_diff = int(np.sum(view_ss) / 2 - np.sum(nonr_ss) / 2)
 
@@ -250,13 +254,11 @@ def fill_roll_buffer(shared_data, stop_event, proc_lock,
             # Roll the rolling buffer and upload the data
             proc_lock.acquire()
 
-            shared_data.roll_srb(midpoint_diff)
-            shared_data.set_srb_data(channels, uutc_ss, data[channels])
-            
-            data_map = shared_data.get_data_map()
-            data_map['uutc_ss'] += midpoint_diff
-            shared_data.set_data_map(data_map)
-            
+            sd.roll_srb(midpoint_diff)
+            sd.set_srb_data(channels, uutc_ss, data[channels])
+
+            sd.shift_data_map(midpoint_diff)
+
             proc_lock.release()
 
         elif midpoint_diff < 0 and buffer_ss[0] > rec_start:
@@ -273,14 +275,12 @@ def fill_roll_buffer(shared_data, stop_event, proc_lock,
 
             # Roll the rolling buffer and upload the data
             proc_lock.acquire()
-            
-            shared_data.roll_srb(midpoint_diff)
-            shared_data.set_srb_data(channels, uutc_ss, data[channels])
-            
-            data_map = shared_data.get_data_map()
-            data_map['uutc_ss'] += midpoint_diff
-            shared_data.set_data_map(data_map)
-            
+
+            sd.roll_srb(midpoint_diff)
+            sd.set_srb_data(channels, uutc_ss, data[channels])
+
+            sd.shift_data_map(midpoint_diff)
+
             proc_lock.release()
 
 
@@ -306,8 +306,6 @@ class MemoryBuffer(BufferDataSource, QObject):
 
         self.current_view_dm = None
 
-        
-
         self.chunk_size = int(CONF.get('data_management', 'chunk_size')*1e6)
         self.N_chunks_before = CONF.get('data_management', 'n_chunks_before')
         self.N_chunks_after = CONF.get('data_management', 'n_chunks_after')
@@ -323,9 +321,9 @@ class MemoryBuffer(BufferDataSource, QObject):
 
         self.buffer_manager = SharedDataManager()
         self.buffer_manager.start()
-        self.shared_data = self.buffer_manager.SharedData()
-        self.shared_data.set_chunk_size(self.chunk_size)
-        self.shared_data.set_data_map(self.data_map)
+        self.sd = self.buffer_manager.SharedData()
+        self.sd.set_chunk_size(self.chunk_size)
+        self.sd.set_data_map(self.data_map)
 
         self.buffer_stop = None
         self.buffer_process = None
@@ -344,9 +342,9 @@ class MemoryBuffer(BufferDataSource, QObject):
         self.thread_stop.set()
         self.monitor_thread.join()
         return
-    
+
     def purge_data(self):
-        self.shared_data.purge_srb()
+        self.sd.purge_srb()
 
     def start_new_buffer(self):
         """
@@ -363,7 +361,7 @@ class MemoryBuffer(BufferDataSource, QObject):
         self.buffer_lock = Lock()
         self.setup_buffer_vars()
         self.buffer_process = Process(target=fill_roll_buffer,
-                                      args=(self.shared_data,
+                                      args=(self.sd,
                                             self.buffer_stop,
                                             self.buffer_lock,
                                             self.N_chunks_before,
@@ -383,7 +381,7 @@ class MemoryBuffer(BufferDataSource, QObject):
         fsamps = sm.ODS.data_map['fsamp']
 
         uutc_ss = np.zeros(2, 'int64')
-        if self.shared_data.get_current_view_dm() is None:
+        if self.sd.get_current_view_dm() is None:
             uutc_ss[:] = self.rec_start
         else:
             self.data_map['uutc_ss'][:] = self.curr_view_times[0]
@@ -405,21 +403,21 @@ class MemoryBuffer(BufferDataSource, QObject):
         sizes = (np.ones(n_elem)*fsamps*np.diff(uutc_ss)/1e6).astype('int64')
 
         srb = PysigviewMultiRingBuffer(n_elem, sizes, float, uutc_ss,
-                                            fsamps, self.datadir)
-        
-        self.shared_data.set_data_map(self.data_map)
-        self.shared_data.set_srb(srb)
+                                       fsamps, self.datadir)
+
+        self.sd.set_data_map(self.data_map)
+        self.sd.set_srb(srb)
 
     def monitor_buffer(self):
-        prev_ss = self.shared_data.get_data_map().get_active_largest_ss()
+        prev_ss = self.sd.get_data_map().get_active_largest_ss()
         while True:
             if self.thread_stop.is_set():
                 return
-            prox_ss = self.shared_data.get_data_map().get_active_largest_ss()
+            prox_ss = self.sd.get_data_map().get_active_largest_ss()
             if np.any(prev_ss != prox_ss):
-                self.data_map = self.shared_data.get_data_map()
+                self.data_map = self.sd.get_data_map()
                 self.state_changed.emit()
-                prev_ss = self.shared_data.get_data_map().get_active_largest_ss()
+                prev_ss = self.sd.get_data_map().get_active_largest_ss()
 
     def update(self, view_dm):
         """
@@ -428,7 +426,7 @@ class MemoryBuffer(BufferDataSource, QObject):
 
         self.buffer_lock.acquire()
 
-        self.data_map = self.shared_data.get_data_map()
+        self.data_map = self.sd.get_data_map()
 
         self.curr_view_times = view_dm.get_active_largest_ss()
 
@@ -446,10 +444,10 @@ class MemoryBuffer(BufferDataSource, QObject):
 
             # Add channels
             self.data_map['ch_set'][added_chans] = True
-            
-            self.shared_data.set_current_view_dm(view_dm)
-            self.shared_data.set_data_map(self.data_map)
-            
+
+            self.sd.set_current_view_dm(view_dm)
+            self.sd.set_data_map(self.data_map)
+
             self.buffer_lock.release()
             self.start_new_buffer()
             return
@@ -493,17 +491,17 @@ class MemoryBuffer(BufferDataSource, QObject):
 
                 # Shrink
                 if chunk_diff < 0:
-                    self.shared_data.shrink_srb(-chunk_diff*self.N_chunks,
-                                                fb_ratio)
-                    self.shared_data.shirnk_data_map(-chunk_diff*self.N_chunks,
-                                                     fb_ratio)
+                    self.sd.shrink_srb(-chunk_diff*self.N_chunks,
+                                       fb_ratio)
+                    self.sd.shirnk_data_map(-chunk_diff*self.N_chunks,
+                                            fb_ratio)
                 # Enlarge
                 else:
-                    self.shared_data.enlarge_srb(chunk_diff*self.N_chunks,
-                                             fb_ratio)
+                    self.sd.enlarge_srb(chunk_diff*self.N_chunks,
+                                        fb_ratio)
 
             else:
-                self.shared_data.set_current_view_dm(view_dm)
+                self.sd.set_current_view_dm(view_dm)
                 self.buffer_lock.release()
                 self.start_new_buffer()
                 return
@@ -511,14 +509,14 @@ class MemoryBuffer(BufferDataSource, QObject):
         # Shift
         else:
             if not self._is_in_buffer(view_dm):
-                self.shared_data.set_current_view_dm(view_dm)
+                self.sd.set_current_view_dm(view_dm)
                 self.buffer_lock.release()
                 self.start_new_buffer()
                 return
 
-        self.shared_data.set_chunk_size(self.chunk_size)
-        self.shared_data.set_current_view_dm(view_dm)
-        self.shared_data.set_data_map(self.data_map)
+        self.sd.set_chunk_size(self.chunk_size)
+        self.sd.set_current_view_dm(view_dm)
+        self.sd.set_data_map(self.data_map)
 
         self.buffer_lock.release()
 
@@ -535,28 +533,10 @@ class MemoryBuffer(BufferDataSource, QObject):
         else:
             return False
 
-    def _change_data_map_size(self, by, fb_ratio):
-        self.data_map['uutc_ss'][:, 0] -= int((by * (1-fb_ratio)) + 0.5)
-        self.data_map['uutc_ss'][:, 1] += int((by * fb_ratio) + 0.5)
-
-    def _shirnk_data_map(self, by, fb_ratio):
-        self.data_map['uutc_ss'][:, 0] += int((by * (1-fb_ratio)) + 0.5)
-        self.data_map['uutc_ss'][:, 1] -= int((by * fb_ratio) + 0.5)
-
-    def _enlarge_data_map(self, by, fb_ratio):
-        self.data_map['uutc_ss'][:, 0] -= int((by * (1-fb_ratio)) + 0.5)
-        self.data_map['uutc_ss'][:, 1] += int((by * fb_ratio) + 0.5)
-
     # ----- DataSource API -----
 
     def get_data(self, req_data_map):
-        
-        t = time()
-                
-        print('Proxy sync in',time()-t)
-        
-        t = time()
-        
+
         read_ch_idcs = np.where(self.data_map['ch_set'])[0]
         uutc_ss = req_data_map['uutc_ss'][read_ch_idcs]
         obj_uutc_ss = np.empty(len(read_ch_idcs), 'object')
@@ -566,14 +546,8 @@ class MemoryBuffer(BufferDataSource, QObject):
         data_out = np.empty(len(self.data_map), object)
         for i in range(len(data_out)):
             data_out[i] = np.array([], dtype='float32')
-            
-        print('Array and indices preparation',time()-t)
-                     
-        t = time()
-            
-        data_out[read_ch_idcs] = self.shared_data.get_srb_data(read_ch_idcs,
-                                                               obj_uutc_ss)
 
-        print('Data from ring buffer in',time()-t)
+        data_out[read_ch_idcs] = self.sd.get_srb_data(read_ch_idcs,
+                                                      obj_uutc_ss)
 
         return data_out
