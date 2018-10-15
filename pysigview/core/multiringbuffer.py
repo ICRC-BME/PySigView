@@ -27,8 +27,6 @@ import bcolz as bc
 
 # Local imports
 
-#bc.cparams.setdefaults(clevel=0, shuffle=None, cname=None, quantize=None)
-
 
 class MultiRingBuffer(Sequence):
     def __init__(self, n_elements, sizes=None, dtype=float, datadir=None):
@@ -184,7 +182,7 @@ class MultiRingBuffer(Sequence):
             self._indices[e] = ci + by
             self._indices[e] -= int(by * (1 - fb_ratio) + 0.5)
             self._sizes[e] += by
-            
+
             self._arr[e].flush()
 
     def shrink(self, by, elements=None, fb_ratio=0.5):
@@ -224,11 +222,11 @@ class MultiRingBuffer(Sequence):
                 self._arr[e][idx_a] = self._arr[e][idx_a]
 
             self._arr[e].resize(self._sizes[e])
-            
+
             self._arr[e].flush()
 
     def purge_data(self):
-        
+
         for a in self._arr:
             a.purge()
 
@@ -272,7 +270,7 @@ class MultiRingBuffer(Sequence):
             if not isinstance(val, np.ndarray):
                 raise ValueError('Only arrays can be set as elements')
             self._arr[e] = val
-            
+
         self._arr[e].flush()
 
     def _get_element(self, e, s=None):
