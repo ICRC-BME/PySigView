@@ -28,9 +28,9 @@ from pysigview.core.multiringbuffer import MultiRingBuffer
 class PysigviewMultiRingBuffer():
 
     def __init__(self, n_elements, sizes=None, dtype=float,
-                 uutc_ss=None, fs=None):
+                 uutc_ss=None, fs=None, datadir=None):
 
-        self._mrb = MultiRingBuffer(n_elements, sizes, dtype)
+        self._mrb = MultiRingBuffer(n_elements, sizes, dtype, datadir)
 
         if isinstance(fs, (int, float)):
             self._fs = np.zeros(n_elements, float) + fs
@@ -131,6 +131,9 @@ class PysigviewMultiRingBuffer():
             self._uutc_ss[elements, 0] += int((by * (1-fb_ratio)) + 0.5)
             self._uutc_ss[elements, 1] -= int((by * fb_ratio) + 0.5)
 
+    def purge_data(self):
+        self._mrb.purge_data()
+
     def _create_full_slice(self, s, e):
         if s.start is None:
             start = self._uutc_ss[e][0]
@@ -195,8 +198,7 @@ class PysigviewMultiRingBuffer():
                         * self._fs[e])
                 step = ((t_ss.step / 1e6)
                         * self._fs[e])
-                # OPTIMIZE - this is memory inefficient
-                samps[i] = np.arange(start, stop, step, dtype=int)
+                samps[i] = slice(int(start), int(stop), int(step))
 
         elif isinstance(t_ss, np.ndarray):
             samps = np.zeros(len(elements), object)
@@ -223,8 +225,7 @@ class PysigviewMultiRingBuffer():
                             * self._fs[e])
                     step = ((ts.step / 1e6)
                             * self._fs[e])
-                    # OPTIMIZE - this is memory inefficient
-                    samps[i] = np.arange(start, stop, step, dtype=int)
+                    samps[i] = slice(int(start), int(stop), int(step))
 
         return (elements, samps)
 

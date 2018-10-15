@@ -872,6 +872,7 @@ class MainWindow(QMainWindow):
         if isinstance(sm.PDS, MemoryBuffer):
             sm.PDS.terminate_buffer()
             sm.PDS.terminate_monitor_thread()
+            sm.PDS.purge_data()
 
         self.already_closed = True
         return True
@@ -942,22 +943,9 @@ class MainWindow(QMainWindow):
             self.window_position = self.pos()
         QMainWindow.moveEvent(self, event)
 
-    # TODO: stop buffers and threads
     def closeEvent(self, event):
 
-        # if self.buffer_controller:
-        #    # Stop buffer threads
-        #    self.buffer_controller.buffer_monitor_thread.stop_execution()
-        #    self.buffer_controller.internal_buffer_thread.stop_execution()
-        #
-        #    # Clean up disk buffer and terminate the process
-        #    self.buffer_controller.buffer_process.purge_buffers()
-        #    self.buffer_controller.buffer_process.terminate()
-
         self.closing()
-
-        # !!! Remember opened docks
-
         event.accept()
 
 
