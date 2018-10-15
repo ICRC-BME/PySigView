@@ -37,6 +37,8 @@ class mefdHandler(FileDataSource):
         self.name = 'Mef session'
         self.extension = '.mefd'
 
+        self.session_md = None
+
     def check_password(self, password):
 
         # Get one .tdat file and test it (shuold the C function do this?)
@@ -52,14 +54,16 @@ class mefdHandler(FileDataSource):
 
     def load_metadata(self):
 
-        session_md = pymef3_file.read_mef_session_metadata(self._path,
-                                                           self._password,
-                                                           False)
+        if self.session_md is None:
+            self.session_md = pymef3_file.read_mef_session_metadata(
+                    self._path,
+                    self._password,
+                    False)
 
         # Get information about the recording
-        spec_md = session_md['session_specific_metadata']
-        ts_md = session_md['time_series_metadata']['section_2']
-        channel_list = list(session_md['time_series_channels'].keys())
+        spec_md = self.session_md['session_specific_metadata']
+        ts_md = self.session_md['time_series_metadata']['section_2']
+        channel_list = list(self.session_md['time_series_channels'].keys())
         channel_list.sort()
 
         self.recording_info = {}
@@ -80,7 +84,7 @@ class mefdHandler(FileDataSource):
                                ('uutc_ss', np.int64, 2)])
 
         for i, channel in enumerate(channel_list):
-            channel_md = session_md['time_series_channels'][channel]
+            channel_md = self.session_md['time_series_channels'][channel]
             fsamp = channel_md['section_2']['sampling_frequency']
             nsamp = channel_md['section_2']['number_of_samples']
             ufact = channel_md['section_2']['units_conversion_factor']
@@ -139,20 +143,22 @@ class mefdHandler(FileDataSource):
         Annotations - in form of pandas DataFrame(s)
         """
 
-        session_md = pymef3_file.read_mef_session_metadata(self._path,
-                                                           self._password,
-                                                           False)
+        if self.session_md is None:
+            self.session_md = pymef3_file.read_mef_session_metadata(
+                    self._path,
+                    self._password,
+                    False)
 
         dfs_out = {}
 
         # Get session level records
-        if 'records_info' in session_md.keys():
-            session_records = session_md['records_info']['records']
+        if 'records_info' in self.session_md.keys():
+            session_records = self.session_md['records_info']['records']
 
             dfs_out.update(self._process_mef_records(session_records))
 
         # Get channel level records
-        for channel, channel_d in session_md['time_series_channels'].items():
+        for _, channel_d in self.session_md['time_series_channels'].items():
             if 'records_info' in channel_d.keys():
                 ch_rec_list = channel_d['records_info']['records']
             else:
