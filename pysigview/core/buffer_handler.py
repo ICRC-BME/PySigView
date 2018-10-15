@@ -454,12 +454,8 @@ class MemoryBuffer(BufferDataSource, QObject):
         new_chunk_size = np.diff(self.curr_view_times)
         chunk_diff = new_chunk_size - self.chunk_size
 
-        # TODO - put enalarge and shrink into same block of code
-        # it is essentially the same thing. is different for the basic
-        # ring buffer. tackle problems with rounding
-
         # Shrink & enlarge
-        if chunk_diff < 0:
+        if chunk_diff < 0 or chunk_diff > 0:
             self.chunk_size = new_chunk_size
             if self._is_in_buffer(view_dm):
 
@@ -491,51 +487,15 @@ class MemoryBuffer(BufferDataSource, QObject):
 
                 fb_ratio = front_portion / (front_portion + back_portion)
 
-                self.shared_data.shrink_srb(-chunk_diff*self.N_chunks,
-                                            fb_ratio)
-                self.shared_data.shirnk_data_map(-chunk_diff*self.N_chunks,
-                                                 fb_ratio)
-
-            else:
-                self.shared_data.set_current_view_dm(view_dm)
-                self.buffer_lock.release()
-                self.start_new_buffer()
-                return
-
-        # Enlarge
-        elif chunk_diff > 0:
-            self.chunk_size = new_chunk_size
-            if self._is_in_buffer(view_dm):
-
-                new_front_point = (self.curr_view_times[1]
-                                   + (self.N_chunks_after * self.chunk_size))
-                new_back_point = (self.curr_view_times[0]
-                                  - (self.N_chunks_before * self.chunk_size))
-
-                # Check if we are before the rec start
-                if new_back_point < self.rec_start:
-                    add_to_front = self.rec_start - new_back_point
-                    new_back_point = self.rec_start
+                # Shrink
+                if chunk_diff < 0:
+                    self.shared_data.shrink_srb(-chunk_diff*self.N_chunks,
+                                                fb_ratio)
+                    self.shared_data.shirnk_data_map(-chunk_diff*self.N_chunks,
+                                                     fb_ratio)
+                # Enlarge
                 else:
-                    add_to_front = 0
-
-                # Check if we are before the rec stop
-                if new_front_point > self.rec_end:
-                    add_to_back = new_front_point - self.rec_end
-                    new_front_point = self.rec_end
-                else:
-                    add_to_back = 0
-
-                dm_ss = self.data_map.get_active_largest_ss()
-                front_portion = dm_ss[1] - new_front_point
-                back_portion = new_back_point - dm_ss[0]
-
-                front_portion += add_to_front
-                back_portion += add_to_back
-
-                fb_ratio = front_portion / (front_portion + back_portion)
-
-                self.shared_data.enlarge_srb(chunk_diff*self.N_chunks,
+                    self.shared_data.enlarge_srb(chunk_diff*self.N_chunks,
                                              fb_ratio)
 
             else:
