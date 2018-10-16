@@ -401,6 +401,7 @@ class MemoryBuffer(BufferDataSource, QObject):
             uutc_ss[1] = self.rec_end
 
         sizes = (np.ones(n_elem)*fsamps*np.diff(uutc_ss)/1e6).astype('int64')
+        sizes[~self.data_map['ch_set']] = 0
 
         srb = PysigviewMultiRingBuffer(n_elem, sizes, float, uutc_ss,
                                        fsamps, self.datadir)
