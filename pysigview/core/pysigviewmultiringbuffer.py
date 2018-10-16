@@ -189,14 +189,14 @@ class PysigviewMultiRingBuffer():
         elif isinstance(t_ss, slice):
             samps = np.zeros(len(elements), object)
             for i, e in enumerate(elements):
-                t_ss = self._create_full_slice(t_ss, e)
+                full_t_ss = self._create_full_slice(t_ss, e)
                 self._check_time(e, t_ss.start)
                 self._check_time(e, t_ss.stop)
-                start = (((t_ss.start - self._uutc_ss[e][0]) / 1e6)
+                start = (((full_t_ss.start - self._uutc_ss[e][0]) / 1e6)
                          * self._fs[e])
-                stop = (((t_ss.stop - self._uutc_ss[e][0]) / 1e6)
+                stop = (((full_t_ss.stop - self._uutc_ss[e][0]) / 1e6)
                         * self._fs[e])
-                step = ((t_ss.step / 1e6)
+                step = ((full_t_ss.step / 1e6)
                         * self._fs[e])
                 samps[i] = slice(int(start), int(stop), int(step))
 
