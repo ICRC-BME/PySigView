@@ -115,10 +115,12 @@ class SharedData:
         self.srb.roll(by)
 
     def shrink_srb(self, by, fb_ratio):
-        self.srb.shrink(by, fb_ratio=fb_ratio)
+        elements = np.where(self.data_map['ch_set'])[0]
+        self.srb.shrink(by, elements, fb_ratio)
 
     def enlarge_srb(self, by, fb_ratio):
-        self.srb.enlarge(by, fb_ratio=fb_ratio)
+        elements = np.where(self.data_map['ch_set'])[0]
+        self.srb.enlarge(by, elements, fb_ratio)
 
     def purge_srb(self):
         self.srb.purge_data()
