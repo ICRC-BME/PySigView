@@ -55,6 +55,7 @@ class SharedData:
         self.chunk_size = 0
         self.data_map = None
         self.current_view_dm = None
+        self.size_changed = False
 
     def set_chunk_size(self, chunk_size):
         self.chunk_size = chunk_size
@@ -125,6 +126,14 @@ class SharedData:
     def purge_srb(self):
         self.srb.purge_data()
 
+    def get_size_changed(self):
+        return self.size_changed
+
+    def set_size_changed(self):
+        self.size_changed = True
+        
+    def unset_size_changed(self):
+        self.size_changed = False
 
 class SharedDataManager(BaseManager):
     pass
@@ -188,6 +197,10 @@ def fill_roll_buffer(sd, stop_event, proc_lock,
 
                 # Update shared memory proxies
                 proc_lock.acquire()
+                if sd.get_size_changed():
+                    sd.unset_size_changed()
+                    proc_lock.release()
+                    continue
 
                 sd.set_srb_data(channels, uutc_ss, data[channels])
 
@@ -215,6 +228,10 @@ def fill_roll_buffer(sd, stop_event, proc_lock,
 
                 # Update shared memory proxies
                 proc_lock.acquire()
+                if sd.get_size_changed():
+                    sd.unset_size_changed()
+                    proc_lock.release()
+                    continue
 
                 sd.set_srb_data(channels, uutc_ss, data[channels])
 
@@ -255,6 +272,10 @@ def fill_roll_buffer(sd, stop_event, proc_lock,
 
             # Roll the rolling buffer and upload the data
             proc_lock.acquire()
+            if sd.get_size_changed():
+                sd.unset_size_changed()
+                proc_lock.release()
+                continue
 
             sd.roll_srb(midpoint_diff)
             sd.set_srb_data(channels, uutc_ss, data[channels])
@@ -277,7 +298,11 @@ def fill_roll_buffer(sd, stop_event, proc_lock,
 
             # Roll the rolling buffer and upload the data
             proc_lock.acquire()
-
+            if sd.get_size_changed():
+                sd.unset_size_changed()
+                proc_lock.release()
+                continue
+            
             sd.roll_srb(midpoint_diff)
             sd.set_srb_data(channels, uutc_ss, data[channels])
 
@@ -502,6 +527,8 @@ class MemoryBuffer(BufferDataSource, QObject):
                 else:
                     self.sd.enlarge_srb(chunk_diff*self.N_chunks,
                                         fb_ratio)
+                    
+                self.sd.set_size_changed()
 
             else:
                 self.sd.set_current_view_dm(view_dm)
