@@ -131,9 +131,10 @@ class SharedData:
 
     def set_size_changed(self):
         self.size_changed = True
-        
+
     def unset_size_changed(self):
         self.size_changed = False
+
 
 class SharedDataManager(BaseManager):
     pass
@@ -149,6 +150,21 @@ SharedDataManager.register("SharedData", SharedData)
 def fill_roll_buffer(sd, stop_event, proc_lock,
                      chunks_before, chunks_after):
 
+    def check_load_dm(load_dm):
+
+        rec_start = sm.ODS.recording_info['recording_start']
+        rec_end = sm.ODS.recording_info['recording_end']
+
+        if any(load_dm['uutc_ss'][:, 0] < rec_start):
+            largest_diff = np.max(rec_start - load_dm['uutc_ss'][:, 0])
+            load_dm['uutc_ss'] += largest_diff
+
+        if any(load_dm['uutc_ss'][:, 1] > rec_end):
+            largest_diff = np.max(load_dm['uutc_ss'][:, 1] - rec_end)
+            load_dm['uutc_ss'] -= largest_diff
+
+        return load_dm
+
     # Some recording info
     rec_start = sm.ODS.recording_info['recording_start']
     rec_end = sm.ODS.recording_info['recording_end']
@@ -156,6 +172,7 @@ def fill_roll_buffer(sd, stop_event, proc_lock,
     # Variables need for the process
     load_dm = sd.get_data_map()
     load_dm['uutc_ss'][:, 1] += sd.get_chunk_size()
+    load_dm = check_load_dm(load_dm)
     load_ss = load_dm.get_active_largest_ss()
 
     while True:
@@ -181,6 +198,7 @@ def fill_roll_buffer(sd, stop_event, proc_lock,
 
             load_dm['uutc_ss'][:, 0] = buffer_ss[1]
             load_dm['uutc_ss'][:, 1] = buffer_ss[1] + sd.get_chunk_size()
+            load_dm = check_load_dm(load_dm)
             load_ss = load_dm.get_active_largest_ss()
 
             # Is load data map beyond the ring buffer?
@@ -212,6 +230,7 @@ def fill_roll_buffer(sd, stop_event, proc_lock,
 
             load_dm['uutc_ss'][:, 0] = buffer_ss[0] - sd.get_chunk_size()
             load_dm['uutc_ss'][:, 1] = buffer_ss[0]
+            load_dm = check_load_dm(load_dm)
             load_ss = load_dm.get_active_largest_ss()
 
             # Is load data map beyond the ring buffer?
@@ -262,6 +281,7 @@ def fill_roll_buffer(sd, stop_event, proc_lock,
             # Determine the loadmap
             load_dm['uutc_ss'][:, 0] = buffer_ss[1]
             load_dm['uutc_ss'][:, 1] = buffer_ss[1] + midpoint_diff
+            load_dm = check_load_dm(load_dm)
 
             # Load data
             data = sm.ODS.get_data(load_dm)
@@ -288,6 +308,7 @@ def fill_roll_buffer(sd, stop_event, proc_lock,
             # Determine the loadmap
             load_dm['uutc_ss'][:, 1] = buffer_ss[0]
             load_dm['uutc_ss'][:, 0] = buffer_ss[0] + midpoint_diff
+            load_dm = check_load_dm(load_dm)
 
             # Load data
             data = sm.ODS.get_data(load_dm)
@@ -302,7 +323,7 @@ def fill_roll_buffer(sd, stop_event, proc_lock,
                 sd.unset_size_changed()
                 proc_lock.release()
                 continue
-            
+
             sd.roll_srb(midpoint_diff)
             sd.set_srb_data(channels, uutc_ss, data[channels])
 
@@ -527,7 +548,7 @@ class MemoryBuffer(BufferDataSource, QObject):
                 else:
                     self.sd.enlarge_srb(chunk_diff*self.N_chunks,
                                         fb_ratio)
-                    
+
                 self.sd.set_size_changed()
 
             else:
