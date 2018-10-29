@@ -91,8 +91,8 @@ class PlotContainerItem(QTreeWidgetItem):
         # Connect signals
         self.item_widget.color_select.color_changed.connect(self.change_color)
         self.item_widget.check_box.stateChanged.connect(self.evaluate_check)
-        self.main.signal_display.plots_changed.connect(self.pvc.update_eas)
-        self.main.signal_display.plots_changed.connect(self.update_pas)
+        self.sd.plots_changed.connect(self.pvc.update_eas)
+        self.sd.plots_changed.connect(self.update_pas)
 
     def update_label(self):
         self.item_widget.set_edit_label(self.pvc.name)
@@ -104,10 +104,10 @@ class PlotContainerItem(QTreeWidgetItem):
     def evaluate_check(self):
         if self.item_widget.check_box.checkState():
             self.pvc.visual.visible = True
-            self.pvc.label.visible = True
         else:
             self.pvc.visual.visible = False
-            self.pvc.label.visible = False
+            
+        self.sd._update_labels()
 
     def update_pas(self):
         for ea, pa in zip(self.pvc.exposed_attributes, self.pas):

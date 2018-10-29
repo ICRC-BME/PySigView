@@ -41,7 +41,7 @@ class BaseVisualContainer():
         self.container = None  # ??? Rename to container_item?
         self.data_array_pos = []
         self.visual = None
-        self.label = None
+#        self.label = None
 
         self.N = None  # Number of samples to plot
 
@@ -114,7 +114,7 @@ class SignalContainer(BaseVisualContainer):
             visual_color[ci] = color
 
         self.visual.color = visual_color
-        self.label.color = color
+#        self.label.color = color
         self._line_color = color
 
     def update_eas(self):
@@ -157,7 +157,7 @@ class SignalContainer(BaseVisualContainer):
         self.transform_chain.append(transform)
         if self.container is not None:
             self.container.update_label()
-        self.label.text = self.name
+#        self.label.text = self.name
 
     def transform_chain_remove(self, transform):
         self.transform_chain.pop(transform)

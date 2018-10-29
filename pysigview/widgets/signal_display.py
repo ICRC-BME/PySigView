@@ -36,6 +36,7 @@ from PIL import Image as pil_Image
 from pysigview.cameras.signal_camera import SignalCamera
 from pysigview.core.visual_container import SignalContainer
 from pysigview.visuals.simple_line_visual import SimpleLine
+from pysigview.visuals.multicolor_text_visual import MulticolorText
 
 from pysigview.config.main import CONF
 from pysigview.config.utils import get_home_dir
@@ -155,7 +156,10 @@ class SignalDisplay(QWidget):
                                                  [0., 0., 0., 0.]]),
                                         parent=self.signal_view.scene)
 
-        self.signal_labels = Text(parent=self.signal_view.scene)
+        self.signal_label_visual = MulticolorText(anchor_x='left',
+                                                  anchor_y='top',
+                                                  parent=self.signal_view.scene)
+        self.signal_label_dict = {}
 
         # TODO - one set of x and y axes for measurements
 
@@ -571,6 +575,7 @@ class SignalDisplay(QWidget):
             for pc in pcs:
                 pc.line_color = c
                 pc.container.item_widget.color_select.set_color(c)
+            self._update_labels()
         elif self.color_coding_mode == 1:
             # Channels
              #TODO - in prefs, color.get_colormaps()
@@ -580,6 +585,7 @@ class SignalDisplay(QWidget):
             for pc, c in zip(pcs, colors):
                 pc.line_color = c.rgba[0]
                 pc.container.item_widget.color_select.set_color(c.rgba[0])
+            self._update_labels()
             # Acquire the colors based on number of channels
             # ???Introduce a limit??? If not the channels might be too simliar
         elif self.color_coding_mode == 2:
@@ -601,6 +607,7 @@ class SignalDisplay(QWidget):
                 for pc in g_pcs:
                     pc.line_color = c.rgba[0]
                     pc.container.item_widget.color_select.set_color(c.rgba[0])
+            self._update_labels()
 
         elif self.color_coding_mode == 3:
             # Amplitude
@@ -862,8 +869,11 @@ class SignalDisplay(QWidget):
         pc.line_color = np.array(c)
         pc.visual = SimpleLine(color=c, width=w,
                                parent=self.signal_view.scene)
-        pc.label = Text(orig_channel, color=c, anchor_x='left', anchor_y='top',
-                        parent=self.signal_view.scene)
+#        pc.label = Text(orig_channel, color=c, anchor_x='left', anchor_y='top',
+#                        parent=self.signal_view.scene)
+        
+        self.signal_label_dict[pc] = {'pos': [0, 0, 0],
+                                      'color': 'black'}
 
         pc.data_array_pos = [np.where(ci)[0][0]]
 
@@ -881,7 +891,7 @@ class SignalDisplay(QWidget):
 
     def remove_plot_container(self, pc):
         pc.visual.parent = None
-        pc.label.parent = None
+#        pc.label.parent = None
 
     def side_flash(self, color=None):
 
@@ -1008,6 +1018,25 @@ class SignalDisplay(QWidget):
 
         return
 
+    def _update_labels(self):
+        """
+        Update names, positions and labels
+        """
+        
+        name_list = []
+        pos_list = []
+        color_list = []
+        for pc, data_dict in self.signal_label_dict.items():
+        
+            if pc.visual.visible:
+                name_list.append(pc.name)
+                pos_list.append(data_dict['pos'])
+                color_list.append(pc.line_color)
+            
+        self.signal_label_visual.text = name_list
+        self.signal_label_visual.pos = pos_list
+        self.signal_label_visual.color = np.c_[color_list]
+
     def update_visual_positions(self):
         for pc in self.get_plot_containers():
             if pc.autoscale:
@@ -1035,8 +1064,12 @@ class SignalDisplay(QWidget):
             l_y = pc.plot_position[1] / self.visible_channels.get_row_count()
             l_y += 1 / self.visible_channels.get_row_count()
             y_shift = pc.plot_position[2] / self.canvas.central_widget.height
-            l_y -= y_shift * pc.label.font_size
-            pc.label.pos = [l_x, l_y, 0]
+            l_y -= y_shift * self.signal_label_visual.font_size
+#            pc.label.pos = [l_x, l_y, 0]
+            
+            self.signal_label_dict[pc]['pos'] = [l_x, l_y, 0]
+            
+        self._update_labels()
 
     def move_to_time(self, midpoint):
         """
