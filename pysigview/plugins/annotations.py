@@ -807,7 +807,7 @@ class Annotations(BasePluginWidget):
         elif path.endswith('csv'):
             df = pd.read_csv(path, skipinitialspace=True)
         else:
-            QMessageBox.critical(self, "File format not supported")
+            QMessageBox.critical(self, "open message", "File format not supported")
             return
 
         self.add_annotation_set(df)
