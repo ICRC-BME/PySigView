@@ -100,14 +100,15 @@ class PlotContainerItem(QTreeWidgetItem):
 
     def change_color(self, color):
         self.pvc.line_color = hex2rgba(color.name()+'ff')
+        self.sd._update_signals()
 
     def evaluate_check(self):
         if self.item_widget.check_box.checkState():
             self.pvc.visual.visible = True
         else:
             self.pvc.visual.visible = False
-            
-        self.sd._update_labels()
+
+        self.sd._update_signals()
 
     def update_pas(self):
         for ea, pa in zip(self.pvc.exposed_attributes, self.pas):
@@ -527,6 +528,10 @@ class Channels(BasePluginWidget):
                                                       main.
                                                       signal_display.
                                                       update_visual_positions)
+        self.visible_channels.items_reordered.connect(self.
+                                                      main.
+                                                      signal_display.
+                                                      _update_signals)
 
         # Slide in variables to signal view
         self.main.signal_display.hidden_channels = self.hidden_channels

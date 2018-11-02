@@ -40,6 +40,7 @@ class BaseVisualContainer():
         self.uutc_ss = []
         self.container = None  # ??? Rename to container_item?
         self.data_array_pos = []
+        self.visual_array_idx = 0
         self.visual = None
 #        self.label = None
 

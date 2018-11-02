@@ -26,7 +26,7 @@ from PyQt5.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QPushButton,
                              QDialog, QFileDialog, QComboBox)
 from PyQt5.QtCore import Qt, pyqtSignal, QSize, QThread
 from vispy import scene, color
-from vispy.scene import LinearRegion, Text, Image, Mesh, GridLines
+from vispy.scene import LinearRegion, Image, Mesh, GridLines
 from vispy.util.event import Event
 import numpy as np
 from scipy.io import savemat
@@ -37,6 +37,7 @@ from pysigview.cameras.signal_camera import SignalCamera
 from pysigview.core.visual_container import SignalContainer
 from pysigview.visuals.simple_line_visual import SimpleLine
 from pysigview.visuals.multicolor_text_visual import MulticolorText
+from pysigview.visuals.multiline_visual import Multiline
 
 from pysigview.config.main import CONF
 from pysigview.config.utils import get_home_dir
@@ -158,8 +159,11 @@ class SignalDisplay(QWidget):
 
         self.signal_label_visual = MulticolorText(anchor_x='left',
                                                   anchor_y='top',
-                                                  parent=self.signal_view.scene)
+                                                  parent=self.signal_view.
+                                                  scene)
         self.signal_label_dict = {}
+
+        self.signal_visual = Multiline(parent=self.signal_view.scene)
 
         # TODO - one set of x and y axes for measurements
 
@@ -615,6 +619,8 @@ class SignalDisplay(QWidget):
         else:
             pass
 
+        self._update_signals()
+
     # ----- Autoslide -----
     def autoslide(self):
         self.shift_plot_data(True)
@@ -869,9 +875,7 @@ class SignalDisplay(QWidget):
         pc.line_color = np.array(c)
         pc.visual = SimpleLine(color=c, width=w,
                                parent=self.signal_view.scene)
-#        pc.label = Text(orig_channel, color=c, anchor_x='left', anchor_y='top',
-#                        parent=self.signal_view.scene)
-        
+
         self.signal_label_dict[pc] = {'pos': [0, 0, 0],
                                       'color': 'black'}
 
@@ -891,7 +895,8 @@ class SignalDisplay(QWidget):
 
     def remove_plot_container(self, pc):
         pc.visual.parent = None
-#        pc.label.parent = None
+        self.signal_label_dict.pop(pc)
+        self.set_plot_data()
 
     def side_flash(self, color=None):
 
@@ -992,7 +997,6 @@ class SignalDisplay(QWidget):
         # This check whether provider data source is a buffer
         if getattr(sm.PDS, "is_available", None):
             while not sm.PDS.is_available(self.data_map):
-#                print('Checking availability')
                 sleep(0.1)
                 continue
 
@@ -1010,6 +1014,7 @@ class SignalDisplay(QWidget):
                 pc.scale_factor = pcs[0].scale_factor
 
         self.update_visual_positions()
+        self._update_signals()
 
         if self.resize_flag:
             self.resize_flag = False
@@ -1022,20 +1027,69 @@ class SignalDisplay(QWidget):
         """
         Update names, positions and labels
         """
-        
+
         name_list = []
         pos_list = []
         color_list = []
         for pc, data_dict in self.signal_label_dict.items():
-        
+
             if pc.visual.visible:
                 name_list.append(pc.name)
                 pos_list.append(data_dict['pos'])
                 color_list.append(pc.line_color)
-            
+
         self.signal_label_visual.text = name_list
         self.signal_label_visual.pos = pos_list
         self.signal_label_visual.color = np.c_[color_list]
+
+    def _update_signals(self):
+        scales = []
+        offsets = []
+        color_list = []
+        data = np.empty(len(self.get_plot_containers()), object)
+        visibility = []
+        for li, pc in enumerate(self.get_plot_containers()):
+
+            data[li] = pc.visual.pos[:, 1]
+            pc.visual_array_idx = li
+
+            visibility.append(pc.visual.visible)
+
+            if pc.autoscale:
+                self.autoscale_plot_data(pc)
+
+            # Scale
+            s_x = 1/len(pc.visual.pos)
+            s_y = pc.ufact*pc.scale_factor
+            s_z = 0
+            scales.append([s_x, s_y, s_z])
+
+            # Translate
+            t_x = pc.plot_position[0]
+            t_y = ((-np.nanmean(pc.visual.pos[:, 1])
+                    * pc.ufact
+                    * pc.scale_factor)
+                   + ((0.5+pc.plot_position[1])
+                   / self.visible_channels.get_row_count()))
+            t_z = pc.plot_position[2]
+            offsets.append([t_x, t_y, t_z])
+
+            # Label position
+            l_x = pc.plot_position[0]
+            l_y = pc.plot_position[1] / self.visible_channels.get_row_count()
+            l_y += 1 / self.visible_channels.get_row_count()
+            y_shift = pc.plot_position[2] / self.canvas.central_widget.height
+            l_y -= y_shift * self.signal_label_visual.font_size
+
+            self.signal_label_dict[pc]['pos'] = [l_x, l_y, 0]
+            color_list.append(pc.line_color)
+
+        self.signal_visual.set_data(pos=data,
+                                    scales=scales, offsets=offsets,
+                                    color=color_list,
+                                    visibility=visibility)
+
+        self._update_labels()
 
     def update_visual_positions(self):
         for pc in self.get_plot_containers():
@@ -1068,7 +1122,7 @@ class SignalDisplay(QWidget):
 #            pc.label.pos = [l_x, l_y, 0]
             
             self.signal_label_dict[pc]['pos'] = [l_x, l_y, 0]
-            
+
         self._update_labels()
 
     def move_to_time(self, midpoint):
@@ -1201,6 +1255,7 @@ class SignalDisplay(QWidget):
                 pc.scale_factor = pc.scale_factor / scale
 
         self.update_visual_positions()
+        self._update_signals()
         return
 
     def autoscale_plot_data(self, pc):
