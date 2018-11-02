@@ -122,7 +122,8 @@ void main() {
 
 class MultilineVisual(visuals.Visual):
     def __init__(self, pos=None, columns=None, offsets=None, scales=None,
-                 color=(0.5, 0.5, 0.5, 1),  width=1, index=None):
+                 color=(0.5, 0.5, 0.5, 1),  width=1, index=None,
+                 visibility=None):
         visuals.Visual.__init__(self, VERTEX_SHADER, FRAGMENT_SHADER)
 
         self._need_pos_update = True
@@ -145,6 +146,12 @@ class MultilineVisual(visuals.Visual):
             self._pos = new_pos
         else:
             self._pos = pos
+
+        # Visibility
+        if visibility is None:
+            self._visibility = np.ones(self._pos.shape[0], bool)
+        else:
+            self._visibility = visibility
 
         # Width
         self._width = width
@@ -239,8 +246,8 @@ class MultilineVisual(visuals.Visual):
 
         len_diff = self._pos_len - len(self._index)
         if len_diff > 0:
-            self._index = np.hstack([self._index,
-                                     np.ones(len_diff, dtype=bool)])
+            self._index = np.hstack([self._index, np.ones(len_diff,
+                                                          dtype=bool)])
         elif len_diff < 0:
             self._index = self._index[:len_diff]
 
@@ -275,6 +282,15 @@ class MultilineVisual(visuals.Visual):
         elif len_diff < 0:
             self._offsets = self._offsets[:len_diff]
 
+    def _update_visibility(self):
+
+        len_diff = len(self._pos) - self._visibility.shape[0]
+        if len_diff > 0:
+            self._visibility = np.hstack([self._visibility,
+                                          np.ones(len_diff, 'bool')])
+        elif len_diff < 0:
+            self._visibility = self._visibility[:len_diff]
+
     # ----- LUT -----
     @property
     def lut(self):
@@ -284,6 +300,22 @@ class MultilineVisual(visuals.Visual):
     def lut(self, lut):
         self._lut = lut.astype(np.float32)
         self._lut_tex.set_data(self._lut)
+        self.update()
+
+    # ----- Line visibility -----
+    @property
+    def visibility(self):
+        return self._visibility
+
+    @visibility.setter
+    def visibility(self, visibility):
+        self._visibility = np.array(visibility, bool)
+        self._need_index_update = True
+        self.update()
+
+    def set_line_visibility(self, visibility, line_i):
+        self._visibility[line_i] = visibility
+        self._need_index_update = True
         self.update()
 
     # ----- Line positions -----
@@ -310,6 +342,7 @@ class MultilineVisual(visuals.Visual):
         self._update_index()
         self._update_offsets()
         self._update_scales()
+        self._update_visibility()
 
         self._need_pos_update = True
         self._need_indices_update = True
@@ -336,6 +369,7 @@ class MultilineVisual(visuals.Visual):
             self._update_indices()
             self._update_colors()
             self._update_index()
+            self._update_visibility()
 
             self._need_pos_update = True
             self._need_indices_update = True
@@ -527,6 +561,7 @@ class MultilineVisual(visuals.Visual):
     def index(self, index):
         self._index = index
 
+        self._apply_visibility()
         new_conn = self._create_new_conn()
 
         self._index_buffer.set_data(new_conn)
@@ -538,24 +573,35 @@ class MultilineVisual(visuals.Visual):
         stop = int(self._indices[line_i, 1])
         self._index[start:stop] = index
 
+        self._apply_visibility()
         new_conn = self._create_new_conn()
 
         self._index_buffer.set_data(new_conn)
 
         self.update()
 
+    def _apply_visibility(self):
+        index = self._index.copy()
+        for vis, idx in zip(self._visibility, self._indices):
+            start = int(idx[0])
+            stop = int(idx[1])
+            index[start:stop] *= vis
+
+        return index
+
     def _create_new_conn(self):
-        new_conn = self._conn[self._index]
+        new_conn = self._conn[self._apply_visibility()]
 
         # Adjust indices
         for i, idx in enumerate(self._indices):
-            idx[3] = new_conn[new_conn < idx[1]][-1]
+            if any(new_conn[new_conn < idx[1]]):
+                idx[3] = new_conn[new_conn < idx[1]][-1]
         self._indices_tex.set_data(self._indices.astype(np.float32))
 
         return new_conn
 
     def set_data(self, pos=None, color=None, index=None, scales=None,
-                 offsets=None, line_i=None):
+                 offsets=None, visibility=None, line_i=None):
 
         if line_i is None:
             if pos is not None:
@@ -568,6 +614,8 @@ class MultilineVisual(visuals.Visual):
                 self.scales = scales
             if offsets is not None:
                 self.offsets = offsets
+            if visibility is not None:
+                self.visibility = visibility
         elif isinstance(line_i, int):
             if pos is not None:
                 self.set_line_pos(pos, line_i)
@@ -579,6 +627,8 @@ class MultilineVisual(visuals.Visual):
                 self.set_line_scales(scales, line_i)
             if offsets is not None:
                 self.set_line_offsets(offsets, line_i)
+            if visibility is not None:
+                self.set_line_visibility(visibility, line_i)
         else:
             raise ValueError('Line index must be None or int')
 
@@ -590,7 +640,7 @@ class MultilineVisual(visuals.Visual):
             return False
 
         if self._need_pos_update:
-            pos = np.hstack(self._pos)
+            pos = np.hstack(self._pos).astype(np.float32)
             pos = np.c_[np.arange(self._pos_len, dtype=np.float32), pos]
             self._pos_vbo.set_data(pos)
             self.shared_program['n_lines'] = len(self._line_sizes)
