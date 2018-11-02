@@ -53,11 +53,11 @@ class BaseVisualContainer():
 
 
 class SignalContainer(BaseVisualContainer):
-    def __init__(self, orig_channel):
+    def __init__(self, orig_channel, autoscale=False):
         super().__init__(orig_channel)
 
         self.scale_factor = 1
-        self.autoscale = False
+        self.autoscale = autoscale
         self._line_color = None
         self._line_alpha = 1.
 

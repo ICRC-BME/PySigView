@@ -481,12 +481,15 @@ class SignalDisplay(QWidget):
     def set_autoscale(self):
         pcs = self.get_plot_containers()
 
+        # NOTE - if autoscale active - every channel should be autoscaled -> change autoscale to Class atribute?
         for pc in pcs:
             if pc.autoscale:
                 pc.autoscale = False
+                self.autoscale = False
                 pc.scale_factor = 1
             else:
                 pc.autoscale = True
+                self.autoscale = True
 
         self.update_visual_positions()
 
@@ -842,7 +845,7 @@ class SignalDisplay(QWidget):
         # Get the max span and assign to new signals
         largest_ss = self.data_map.get_active_largest_ss()
 
-        pc = SignalContainer(orig_channel)
+        pc = SignalContainer(orig_channel, autoscale=self.autoscale)
         ci = sm.ODS.data_map['channels'] == pc.orig_channel
         ci_entry = sm.ODS.data_map[ci]
         pc.fsamp = ci_entry['fsamp'][0]
