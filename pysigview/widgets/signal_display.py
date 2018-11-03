@@ -157,10 +157,9 @@ class SignalDisplay(QWidget):
                                                  [0., 0., 0., 0.]]),
                                         parent=self.signal_view.scene)
 
-        self.signal_label_visual = MulticolorText(anchor_x='left',
-                                                  anchor_y='top',
-                                                  parent=self.signal_view.
-                                                  scene)
+        self.label_visual = MulticolorText(anchor_x='left',
+                                           anchor_y='top',
+                                           parent=self.signal_view.scene)
         self.signal_label_dict = {}
 
         self.signal_visual = Multiline(parent=self.signal_view.scene)
@@ -1038,9 +1037,9 @@ class SignalDisplay(QWidget):
                 pos_list.append(data_dict['pos'])
                 color_list.append(pc.line_color)
 
-        self.signal_label_visual.text = name_list
-        self.signal_label_visual.pos = pos_list
-        self.signal_label_visual.color = np.c_[color_list]
+        self.label_visual.text = name_list
+        self.label_visual.pos = pos_list
+        self.label_visual.color = np.c_[color_list]
 
     def _update_signals(self):
         scales = []
@@ -1051,7 +1050,7 @@ class SignalDisplay(QWidget):
         for li, pc in enumerate(self.get_plot_containers()):
 
             data[li] = pc.visual.pos[:, 1] # TODO: change this to only the data once we remove sipleline visuals
-            pc.visual_array_idx = li
+            pc._visual_array_idx = li
 
             visibility.append(pc.visual.visible)
 
@@ -1079,7 +1078,7 @@ class SignalDisplay(QWidget):
             l_y = pc.plot_position[1] / self.visible_channels.get_row_count()
             l_y += 1 / self.visible_channels.get_row_count()
             y_shift = pc.plot_position[2] / self.canvas.central_widget.height
-            l_y -= y_shift * self.signal_label_visual.font_size
+            l_y -= y_shift * self.label_visual.font_size
 
             self.signal_label_dict[pc]['pos'] = [l_x, l_y, 0]
             color_list.append(pc.line_color)
@@ -1118,7 +1117,7 @@ class SignalDisplay(QWidget):
             l_y = pc.plot_position[1] / self.visible_channels.get_row_count()
             l_y += 1 / self.visible_channels.get_row_count()
             y_shift = pc.plot_position[2] / self.canvas.central_widget.height
-            l_y -= y_shift * self.signal_label_visual.font_size
+            l_y -= y_shift * self.label_visual.font_size
 #            pc.label.pos = [l_x, l_y, 0]
             
             self.signal_label_dict[pc]['pos'] = [l_x, l_y, 0]
