@@ -5,6 +5,19 @@ PySigView is a python package for vizualisation of electrophysiological
 signals. The developement is aimed mainly at EEG but technically, any signal
 can be vizualized.
 
+Installation
+------------
+
+To install please use:
+```bash
+pip install pysigview
+```
+
+To install from source:
+```bash
+python setup.py install
+```
+
 Supported formats
 -----------------
 
