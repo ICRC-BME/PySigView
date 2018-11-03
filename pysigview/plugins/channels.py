@@ -104,9 +104,9 @@ class PlotContainerItem(QTreeWidgetItem):
 
     def evaluate_check(self):
         if self.item_widget.check_box.checkState():
-            self.pvc.visual.visible = True
+            self.pvc.visible = True
         else:
-            self.pvc.visual.visible = False
+            self.pvc.visible = False
 
         self.sd._update_signals()
 
@@ -154,7 +154,7 @@ class PlotCollectionItem(QTreeWidgetItem):
             new_label = 'NA'
         self.setText(0, new_label)
 
-
+# TODO: change the style of class naming to confomr to the rest of pysigview
 class visible_channels(QTreeWidget):
 
     # Signals
@@ -527,10 +527,6 @@ class Channels(BasePluginWidget):
         self.visible_channels.items_reordered.connect(self.
                                                       main.
                                                       signal_display.
-                                                      update_visual_positions)
-        self.visible_channels.items_reordered.connect(self.
-                                                      main.
-                                                      signal_display.
                                                       _update_signals)
 
         # Slide in variables to signal view
@@ -565,6 +561,7 @@ class Channels(BasePluginWidget):
                 pvc.line_alpha = cont['pvc']['line_alpha']
                 pvc.autoscale = cont['pvc']['autoscale']
                 pvc.scale_factor = cont['pvc']['scale_factor']
+                pvc.visible = cont['pvc']['visible']
 
                 # TODO - transforms
 
@@ -602,6 +599,7 @@ class Channels(BasePluginWidget):
                     pvc['line_alpha'] = cont_i.pvc.line_alpha
                     pvc['scale_factor'] = cont_i.pvc.scale_factor
                     pvc['autoscale'] = cont_i.pvc.autoscale
+                    pvc['visible'] = cont_i.pvc.visible
 
                 container['pvc'] = pvc
 

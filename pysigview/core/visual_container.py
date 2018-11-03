@@ -61,6 +61,8 @@ class SignalContainer(BaseVisualContainer):
         self._line_color = None
         self._line_alpha = 1.
         self._visual_array_idx = 0
+        self._data = None
+        self._visible = True
 
         self.transform_chain = []
 
@@ -117,6 +119,32 @@ class SignalContainer(BaseVisualContainer):
         self.visual.color = visual_color
 #        self.label.color = color
         self._line_color = color
+        
+    @property
+    def data(self):
+        return self._data
+    
+    @data.setter
+    def data(self, data):
+        data = np.squeeze(np.vstack(data))
+
+        # Apply transform chain
+        if len(self.transform_chain):
+            for t in self.transform_chain:
+                data = t.apply_transform(data)
+
+        if self.N is not None:
+            data = self.subsample_data(data)
+            
+        self._data = data
+        
+    @property
+    def visible(self):
+        return self._visible
+    
+    @visible.setter
+    def visible(self, visible):
+        self._visible = visible
 
     def update_eas(self):
         # Exposed attributes [name, value, read only flag]
