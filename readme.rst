@@ -9,14 +9,14 @@ Installation
 ------------
 
 To install please use:
-```bash
-pip install pysigview
-```
+.. code-block:: python
+    pip install pysigview
+
 
 To install from source:
-```bash
-python setup.py install
-```
+.. code-block:: python
+    python setup.py install
+
 
 Supported formats
 -----------------
