@@ -272,11 +272,20 @@ class AnnotationSet(QTreeWidgetItem):
         if self.item_widget.check_box.checkState():
             self.plot_data = True
             self.plot_set()
+            
+            # Perform plot_set on annotation sets below this one
+            annot_sets_n = self.annotation_list.topLevelItemCount()
+            self_i = self.annotation_list.indexOfTopLevelItem(self)
+            for i in range(annot_sets_n):
+                ann_set = self.annotation_list.topLevelItem(i)
+                if i > self_i:
+                    ann_set.plot_set()
+            
         else:
             self.plot_data = False
             self.plot_set()
             
-            # Deleting - perform plot_set on other annotation sets
+            # Perform plot_set on other annotation sets
             annot_sets_n = self.annotation_list.topLevelItemCount()
             for i in range(annot_sets_n):
                 ann_set = self.annotation_list.topLevelItem(i)
@@ -475,14 +484,7 @@ class AnnotationSet(QTreeWidgetItem):
                 ch_ss = view_dm['uutc_ss'][view_dm['channels'] == ch][0]
 
                 # Get number of samples
-                n_view_samp = len(pc.visual.pos)
-
-                # Prepare visual index and color update
-                new_index = pc.visual.index
-                new_color = pc.visual.color
-                n = len(new_index)
-                if new_color.ndim == 1:
-                    new_color = np.tile(new_color, n).reshape(n, 4)
+                n_samp = len(self.sd.signal_visual.pos[pc._visual_array_idx])
 
                 for i, ann in ch_spec[ch_spec.channel == ch].iterrows():
                     # Uni
@@ -516,43 +518,27 @@ class AnnotationSet(QTreeWidgetItem):
 
                         view_start = ann['start_time'] - ch_ss[0]
                         view_stop = ann['end_time'] - ch_ss[0]
-                        start = int((view_start / np.diff(ch_ss))
-                                    * n_view_samp)
-                        stop = int((view_stop / np.diff(ch_ss))
-                                   * n_view_samp)
+                        start = int((view_start / np.diff(ch_ss)) * n_samp)
+                        stop = int((view_stop / np.diff(ch_ss)) * n_samp)
                         
                         if start < 0:
                             start = 0
-                        if stop > len(pc.visual.pos):
-                            stop = len(pc.visual.pos)
+                        if stop > n_samp:
+                            stop = n_samp
 
                         if plot_flag:
-                            # ----- TO BE DELETED
-                            new_index[start:stop] = 1
-                            new_color[start:stop] = color
-                            # ----
-                            line_idxs.append(pc.visual_array_idx)
+                            line_idxs.append(pc._visual_array_idx)
                             line_starts.append(start)
                             line_stops.append(stop)
                             line_colors.append(color)
                             line_draw.append(True)
                             
                         else:
-                            # ----- TO BE DELETED
-                            new_color_sub = new_color[start:stop]
-                            col_bool = (new_color_sub == color).all(1)
-                            new_color_sub[col_bool] = pc.line_color
-                            new_color[start:stop] = new_color_sub
-                            # -----
-                            
-                            line_idxs.append(pc.visual_array_idx)
+                            line_idxs.append(pc._visual_array_idx)
                             line_starts.append(start)
                             line_stops.append(stop)
                             line_colors.append(pc.line_color)
                             line_draw.append(False)
-
-                pc.visual.index = new_index
-                pc.visual.color = new_color
                 
             if len(line_idxs):
                 
@@ -716,6 +702,15 @@ class AnnotationSubset(QTreeWidgetItem):
         if self.item_widget.check_box.checkState():
             self.plot_data = True
             self.parent().plot_set()
+            
+            # Perform plot_set on annotation sets below this one
+            annot_sets_n = self.annotation_list.topLevelItemCount()
+            self_i = self.annotation_list.indexOfTopLevelItem(self)
+            for i in range(annot_sets_n):
+                ann_set = self.annotation_list.topLevelItem(i)
+                if i > self_i:
+                    ann_set.plot_set()
+            
         else:
             self.plot_data = False
             self.parent().plot_set()
@@ -845,7 +840,6 @@ class Annotations(BasePluginWidget):
 
         self.tool_buttons = [open_file, save_file, db_down, dp_up, add_annot]
 
-    # TODO
     def open_file(self):
         load_dialog = QFileDialog(self)
 
