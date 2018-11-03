@@ -189,9 +189,11 @@ class AnnotationSet(QTreeWidgetItem):
     def __init__(self, parent=None, data_frame=None, df_name=None, **kwargs):
         super().__init__(parent, 1003, **kwargs)
 
-        self.plugin = parent.parent()
+        self.annotation_list = parent # !!! self.parent() not working??
+        self.plugin = parent.parent() # !!! self.parent() not working??
         self.main = parent.main  # !!! self.parent() not working??
         self.main_scene = self.main.signal_display.signal_view.scene
+        self.sd = self.main.signal_display
 
         if data_frame is None:
             self.df = DataFrame(columns=('start_time', 'end_time', 'channel'))
@@ -273,6 +275,13 @@ class AnnotationSet(QTreeWidgetItem):
         else:
             self.plot_data = False
             self.plot_set()
+            
+            # Deleting - perform plot_set on other annotation sets
+            annot_sets_n = self.annotation_list.topLevelItemCount()
+            for i in range(annot_sets_n):
+                ann_set = self.annotation_list.topLevelItem(i)
+                if ann_set is not self:
+                    ann_set.plot_set()
 
     def name_changed(self):
         return
@@ -344,6 +353,13 @@ class AnnotationSet(QTreeWidgetItem):
 
         bi_dfs_pos = []
         bi_dfs_colors = []
+
+        # Lists for signal visual
+        line_idxs = []
+        line_starts = []
+        line_stops = []
+        line_colors = []
+        line_draw = []
 
         for df, color, plot_flag, z_pos in plot_info:
 
@@ -504,23 +520,52 @@ class AnnotationSet(QTreeWidgetItem):
                                     * n_view_samp)
                         stop = int((view_stop / np.diff(ch_ss))
                                    * n_view_samp)
-
+                        
                         if start < 0:
                             start = 0
                         if stop > len(pc.visual.pos):
                             stop = len(pc.visual.pos)
 
                         if plot_flag:
+                            # ----- TO BE DELETED
                             new_index[start:stop] = 1
                             new_color[start:stop] = color
+                            # ----
+                            line_idxs.append(pc.visual_array_idx)
+                            line_starts.append(start)
+                            line_stops.append(stop)
+                            line_colors.append(color)
+                            line_draw.append(True)
+                            
                         else:
+                            # ----- TO BE DELETED
                             new_color_sub = new_color[start:stop]
                             col_bool = (new_color_sub == color).all(1)
                             new_color_sub[col_bool] = pc.line_color
                             new_color[start:stop] = new_color_sub
+                            # -----
+                            
+                            line_idxs.append(pc.visual_array_idx)
+                            line_starts.append(start)
+                            line_stops.append(stop)
+                            line_colors.append(pc.line_color)
+                            line_draw.append(False)
 
                 pc.visual.index = new_index
                 pc.visual.color = new_color
+                
+            if len(line_idxs):
+                
+                line_idxs = np.array(line_idxs)
+                line_starts = np.array(line_starts)
+                line_stops = np.array(line_stops)
+                line_colors = np.array(line_colors)
+                line_draw = np.array(line_draw)
+                
+                self.sd.signal_visual.set_line_color(line_colors,
+                                                     line_idxs,
+                                                     line_starts,
+                                                     line_stops)
 
             # Uni lines
             pos_uni = np.concatenate((pos_ch_non_spec_uni,
@@ -674,6 +719,13 @@ class AnnotationSubset(QTreeWidgetItem):
         else:
             self.plot_data = False
             self.parent().plot_set()
+            
+            # Deleting - perform plot_set on other annotation sets
+            annot_sets_n = self.parent().annotation_list.topLevelItemCount()
+            for i in range(annot_sets_n):
+                ann_set = self.parent().annotation_list.topLevelItem(i)
+                if ann_set is not self:
+                    ann_set.plot_set()
 
     def show_df_view(self):
 

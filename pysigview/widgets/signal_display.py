@@ -1050,7 +1050,7 @@ class SignalDisplay(QWidget):
         visibility = []
         for li, pc in enumerate(self.get_plot_containers()):
 
-            data[li] = pc.visual.pos[:, 1]
+            data[li] = pc.visual.pos[:, 1] # TODO: change this to only the data once we remove sipleline visuals
             pc.visual_array_idx = li
 
             visibility.append(pc.visual.visible)
