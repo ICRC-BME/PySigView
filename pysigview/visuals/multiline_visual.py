@@ -126,6 +126,8 @@ class MultilineVisual(visuals.Visual):
                  visibility=None):
         visuals.Visual.__init__(self, VERTEX_SHADER, FRAGMENT_SHADER)
 
+        self._update_lock = False
+
         self._need_pos_update = True
         self._need_color_update = True
         self._need_indices_update = True
@@ -300,7 +302,8 @@ class MultilineVisual(visuals.Visual):
     def lut(self, lut):
         self._lut = lut.astype(np.float32)
         self._lut_tex.set_data(self._lut)
-        self.update()
+        if not self._update_lock:
+            self.update()
 
     # ----- Line visibility -----
     @property
@@ -311,12 +314,14 @@ class MultilineVisual(visuals.Visual):
     def visibility(self, visibility):
         self._visibility = np.array(visibility, bool)
         self._need_index_update = True
-        self.update()
+        if not self._update_lock:
+            self.update()
 
     def set_line_visibility(self, visibility, line_i):
         self._visibility[line_i] = visibility
         self._need_index_update = True
-        self.update()
+        if not self._update_lock:
+            self.update()
 
     # ----- Line positions -----
 
@@ -351,7 +356,8 @@ class MultilineVisual(visuals.Visual):
         self._need_scales_update = True
         self._need_offsets_update = True
 
-        self.update()
+        if not self._update_lock:
+            self.update()
 
     def set_line_pos(self, pos, line_i):
         # Get the line start
@@ -381,7 +387,8 @@ class MultilineVisual(visuals.Visual):
             pos = np.c_[np.arange(len(pos), dtype=np.float32) + start,
                         pos]
             self._pos_vbo.set_subdata(pos, int(start))
-        self.update()
+        if not self._update_lock:
+            self.update()
 
     # ----- Color -----
 
@@ -436,7 +443,8 @@ class MultilineVisual(visuals.Visual):
                 self._color[int(i[0]):int(i[1])] = ci
 
         self._update_lut_color()
-        self.update()
+        if not self._update_lock:
+            self.update()
 
     def set_line_color(self, color, line_i, c_start=None, c_stop=None):
 
@@ -492,7 +500,8 @@ class MultilineVisual(visuals.Visual):
             self._color[int(c_start[i]):int(c_stop[i])] = pointer
 
         self._update_lut_color()
-        self.update()
+        if not self._update_lock:
+            self.update()
 
     # ----- Array resize for scales and offsets -----
 
@@ -524,13 +533,15 @@ class MultilineVisual(visuals.Visual):
         scales = self._array_resize(scales)
         self._scales = scales
         self._scales_tex.set_data(self._scales.astype(np.float32))
-        self.update()
+        if not self._update_lock:
+            self.update()
 
     def set_line_scales(self, scales, line_i):
         scales = self._array_resize(scales)
         self._scales[line_i, :] = scales
         self._scales_tex.set_data(self._scales)
-        self.update()
+        if not self._update_lock:
+            self.update()
 
     # ----- Line offsets -----
 
@@ -543,13 +554,15 @@ class MultilineVisual(visuals.Visual):
         offsets = self._array_resize(offsets)
         self._offsets = offsets
         self._offsets_tex.set_data(self._offsets.astype(np.float32))
-        self.update()
+        if not self._update_lock:
+            self.update()
 
     def set_line_offsets(self, offsets, line_i):
         offsets = self._array_resize(offsets)
         self._offsets[line_i, :] = offsets
         self._offsets_tex.set_data(self._offsets)
-        self.update()
+        if not self._update_lock:
+            self.update()
 
     # ----- Index buffer / line connections -----
 
@@ -565,7 +578,8 @@ class MultilineVisual(visuals.Visual):
         new_conn = self._create_new_conn()
 
         self._index_buffer.set_data(new_conn)
-        self.update()
+        if not self._update_lock:
+            self.update()
 
     def set_line_index(self, index, line_i):
 
@@ -578,7 +592,8 @@ class MultilineVisual(visuals.Visual):
 
         self._index_buffer.set_data(new_conn)
 
-        self.update()
+        if not self._update_lock:
+            self.update()
 
     def _apply_visibility(self):
         index = self._index.copy()
@@ -602,6 +617,9 @@ class MultilineVisual(visuals.Visual):
 
     def set_data(self, pos=None, color=None, index=None, scales=None,
                  offsets=None, visibility=None, line_i=None):
+
+        # Disable visual updates in property functions
+        self._update_lock = True
 
         if line_i is None:
             if pos is not None:
@@ -631,6 +649,9 @@ class MultilineVisual(visuals.Visual):
                 self.set_line_visibility(visibility, line_i)
         else:
             raise ValueError('Line index must be None or int')
+
+        self._update_lock = False
+        self.update()
 
     def _prepare_transforms(self, view):
         view.view_program.vert['transform'] = view.get_transform()
