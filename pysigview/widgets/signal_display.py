@@ -1025,6 +1025,8 @@ class SignalDisplay(QWidget):
 
         return
 
+    # ----- Signal updating functions -----
+
     def _update_labels(self):
         """
         Update names, positions and labels
@@ -1045,8 +1047,6 @@ class SignalDisplay(QWidget):
         self.label_visual.color = np.c_[color_list]
 
     def _update_signals(self):
-
-        t = time()
 
         scales = []
         offsets = []
@@ -1095,8 +1095,6 @@ class SignalDisplay(QWidget):
                                     visibility=visibility)
 
         self._update_labels()
-
-        print('Data in visual in',time()-t)
 
     def move_to_time(self, midpoint):
         """

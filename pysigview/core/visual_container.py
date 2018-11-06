@@ -21,6 +21,7 @@ United States
 
 # Third pary imports
 import numpy as np
+from scipy.signal import butter, filtfilt
 
 # Local imports
 
@@ -173,3 +174,36 @@ class SignalContainer(BaseVisualContainer):
         self.transform_chain.pop(transform)
         if self.container is not None:
             self.container.update_label()
+            
+    def subsample_data(self, data):
+
+        # TODO - consider using numpy.fft to get rid of scipy dependency
+
+        data_len = np.size(data)
+        if not data_len:
+            return data
+
+        pad = data_len % self.N
+
+        if pad:
+            data = data[:-pad]
+
+        # Check if the data has nans
+        data_nan = np.isnan(data)
+
+        if self.N < np.size(data, 0):
+            cut_off = self.N / (np.size(data, 0) * 2)
+            b, a = butter(4, cut_off)
+            if len(data[~data_nan]):
+                # This will create edge artifacts!
+                data[~data_nan] = filtfilt(b, a, data[~data_nan])
+            # data[::int(len(data)/N)] # Downsampling by choosing one sample
+            return np.nanmean(data.reshape([self.N,
+                                            int(np.floor(data_len/self.N))]),
+                              axis=1)
+        elif self.N > np.size(data) and self.N < np.size(data) * 2:
+            return np.nanmean(data.reshape([self.N,
+                                            int(np.floor(data_len/self.N))]),
+                              axis=1)
+        else:
+            return data
