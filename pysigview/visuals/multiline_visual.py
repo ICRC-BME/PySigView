@@ -240,7 +240,7 @@ class MultilineVisual(visuals.Visual):
     def _update_indices(self):
         self._indices = np.c_[np.hstack([0, np.cumsum(self._line_sizes)[:-1]]),
                               np.cumsum(self._line_sizes),
-                              np.arange(0, 1, 1/len(self._indices)),
+                              np.arange(0, 1, 1/len(self._line_sizes)),
                               np.cumsum(self._line_sizes) - 1]
 
     def _update_index(self):
