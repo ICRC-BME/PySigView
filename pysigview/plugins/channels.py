@@ -154,6 +154,7 @@ class PlotCollectionItem(QTreeWidgetItem):
             new_label = 'NA'
         self.setText(0, new_label)
 
+
 # TODO: change the style of class naming to confomr to the rest of pysigview
 class visible_channels(QTreeWidget):
 
