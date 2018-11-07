@@ -3,10 +3,11 @@
 
 # Third party imports
 from PyQt5.QtCore import pyqtSignal, Qt
-from PyQt5.QtWidgets import (QVBoxLayout,QListWidget, QStackedWidget,
+from PyQt5.QtWidgets import (QVBoxLayout,QListWidget, QStackedWidget, QCheckBox,
                              QWidget, QLineEdit, QGridLayout, QFormLayout,QRadioButton,
                              QComboBox, QLabel, QMessageBox, QPushButton,QHBoxLayout,
                              )
+from PyQt5.QtGui import QIntValidator
 
 # Local imports
 
@@ -21,7 +22,9 @@ class Preferences(QWidget):
         super(Preferences, self).__init__(parent)
 
         self.title = 'Preferences'
-        self.sections = CONF.sections()
+        self.not_configurable = ['DEFAULTS', 'quick_layouts']
+        self.sections = [section for section in CONF.sections()
+                         if section not in self.not_configurable]
 
         # Master layout
         layout = QGridLayout()
@@ -41,7 +44,6 @@ class Preferences(QWidget):
 
         self.options_editor = QStackedWidget(self)
         self._build_option_stack()
-
 
         layout.addWidget(self.butt_load, 9, 1, 1, 2, alignment=Qt.AlignBottom)
         layout.addWidget(self.butt_save, 9, 4, 1, 2, alignment=Qt.AlignBottom)
@@ -83,16 +85,41 @@ class Preferences(QWidget):
         '''
 
         # temporary prototype
-        self.stack_list = []
+        self.stack_layout_dict = {}
         for section in self.sections:
             tmp = QWidget()
             tmp_layout = QFormLayout()
             options = CONF.options(section=section)
             for option in options:
-                tmp_layout.addRow(str(option) , QLineEdit())
-                # tmp_layout.addRow("Address", QLineEdit())
+                option_val = CONF.get(section, option)
+                if isinstance(option_val, bool):
+                    tmp_widget = QCheckBox('On/Off')
+                    tmp_widget.setChecked(True) if option_val else tmp_widget.setChecked(False)
+
+                if isinstance(option_val, str):
+
+                    tmp_widget = QLineEdit()
+                    tmp_widget.setMaxLength(100)
+                    tmp_widget.setText(option_val)
+
+                if isinstance(option_val, tuple) | isinstance(option_val, tuple):
+                    tmp_widget = QHBoxLayout()
+                    for val in option_val:
+                        tmp_val = QLineEdit()
+                        tmp_val.setText(str(val))
+                        tmp_widget.addWidget(tmp_val)
+
+                if isinstance(option_val, int) & ~isinstance(option_val, bool):
+                    tmp_widget = QLineEdit()
+                    tmp_widget.setMaxLength(100)
+                    tmp_widget.setValidator(QIntValidator())
+                    tmp_widget.setMaxLength(4)
+                    tmp_widget.setText(str(option_val))
+
+                tmp_layout.addRow(str(option), tmp_widget)
+
             tmp.setLayout(tmp_layout)
-            self.stack_list.append(tmp)
+            self.stack_layout_dict[section] = tmp
             self.options_editor.addWidget(tmp)
 
     # ----- control button signals ------
