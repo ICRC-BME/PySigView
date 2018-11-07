@@ -595,9 +595,6 @@ class MemoryBuffer(BufferDataSource, QObject):
             obj_uutc_ss[i] = slice(uutc_ss[i][0], uutc_ss[i][1])
 
         data_out = np.empty(len(self.data_map), object)
-        for i in range(len(data_out)):
-            data_out[i] = np.array([], dtype='float32')
-
         data_out[read_ch_idcs] = self.sd.get_srb_data(read_ch_idcs,
                                                       obj_uutc_ss)
 

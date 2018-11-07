@@ -41,9 +41,6 @@ class BaseVisualContainer():
         self.container = None  # ??? Rename to container_item?
         self.data_array_pos = []
         self.visual = None
-        self.label = None
-
-        self.N = None  # Number of samples to plot
 
     def add_data_array_pos(self, position):
         self.data_array_pos.append(position)
@@ -60,6 +57,9 @@ class SignalContainer(BaseVisualContainer):
         self.autoscale = False
         self._line_color = None
         self._line_alpha = 1.
+        self._visual_array_idx = 0
+        self._data = None
+        self._visible = True
 
         self.transform_chain = []
 
@@ -101,21 +101,33 @@ class SignalContainer(BaseVisualContainer):
 
     @line_color.setter
     def line_color(self, color):
-        if self.visual is None:
-            self._line_color = np.array(color, dtype='float32')
-            self._line_color[3] = self._line_alpha
-            return
-
-        color = np.array(color, dtype='float32')
-        color[3] = self._line_alpha
-        visual_color = self.visual.color
-        if visual_color.ndim > 1:
-            ci = (visual_color == self._line_color).all(1)
-            visual_color[ci] = color
-
-        self.visual.color = visual_color
-        self.label.color = color
         self._line_color = color
+
+    @property
+    def data(self):
+        return self._data
+
+    @data.setter
+    def data(self, data):
+        data = np.squeeze(np.vstack(data))
+
+        # Apply transform chain
+        if len(self.transform_chain):
+            for t in self.transform_chain:
+                data = t.apply_transform(data)
+
+        if self.N is not None:
+            data = self.subsample_data(data)
+
+        self._data = data
+
+    @property
+    def visible(self):
+        return self._visible
+
+    @visible.setter
+    def visible(self, visible):
+        self._visible = visible
 
     def update_eas(self):
         # Exposed attributes [name, value, read only flag]
@@ -157,13 +169,12 @@ class SignalContainer(BaseVisualContainer):
         self.transform_chain.append(transform)
         if self.container is not None:
             self.container.update_label()
-        self.label.text = self.name
 
     def transform_chain_remove(self, transform):
         self.transform_chain.pop(transform)
         if self.container is not None:
             self.container.update_label()
-
+            
     def subsample_data(self, data):
 
         # TODO - consider using numpy.fft to get rid of scipy dependency
@@ -196,23 +207,3 @@ class SignalContainer(BaseVisualContainer):
                               axis=1)
         else:
             return data
-
-    def set_data(self, data):
-
-        data = np.squeeze(np.vstack(data))
-
-        # Apply transform chain
-        if len(self.transform_chain):
-            for t in self.transform_chain:
-                data = t.apply_transform(data)
-
-        if self.N is not None:
-            data = self.subsample_data(data)
-
-        y = data.astype('float32')
-        x = np.arange(len(y), dtype='float32')
-
-        pos = np.c_[x, y]
-
-        self.visual.pos = pos
-        self.visual.color = self.line_color

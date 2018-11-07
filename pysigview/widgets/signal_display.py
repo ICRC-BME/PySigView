@@ -26,7 +26,7 @@ from PyQt5.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QPushButton,
                              QDialog, QFileDialog, QComboBox)
 from PyQt5.QtCore import Qt, pyqtSignal, QSize, QThread
 from vispy import scene, color
-from vispy.scene import LinearRegion, Text, Image, Mesh, GridLines
+from vispy.scene import LinearRegion, Image, Mesh, GridLines
 from vispy.util.event import Event
 import numpy as np
 from scipy.io import savemat
@@ -35,7 +35,8 @@ from PIL import Image as pil_Image
 # Local imports
 from pysigview.cameras.signal_camera import SignalCamera
 from pysigview.core.visual_container import SignalContainer
-from pysigview.visuals.simple_line_visual import SimpleLine
+from pysigview.visuals.multicolor_text_visual import MulticolorText
+from pysigview.visuals.multiline_visual import Multiline
 
 from pysigview.config.main import CONF
 from pysigview.config.utils import get_home_dir
@@ -44,7 +45,6 @@ from pysigview.core.thread_workers import TimerWorker
 from pysigview.core.source_manager import DataMap
 from pysigview.utils.qthelpers import (hex2rgba, create_toolbutton,
                                        create_plugin_layout)
-
 
 class SignalDisplay(QWidget):
 
@@ -155,7 +155,14 @@ class SignalDisplay(QWidget):
                                                  [0., 0., 0., 0.]]),
                                         parent=self.signal_view.scene)
 
-        self.signal_labels = Text(parent=self.signal_view.scene)
+        self.label_visual = MulticolorText(anchor_x='left',
+                                           anchor_y='top',
+                                           parent=self.signal_view.scene)
+        self.signal_label_dict = {}
+
+        w = CONF.get(self.CONF_SECTION, 'init_line_width')
+        self.signal_visual = Multiline(width=w,
+                                       parent=self.signal_view.scene)
 
         # TODO - one set of x and y axes for measurements
 
@@ -488,7 +495,7 @@ class SignalDisplay(QWidget):
             else:
                 pc.autoscale = True
 
-        self.update_visual_positions()
+        self._update_signals()
 
     # ----- Save displayed data -----
     def save_displayed_data(self):
@@ -571,6 +578,7 @@ class SignalDisplay(QWidget):
             for pc in pcs:
                 pc.line_color = c
                 pc.container.item_widget.color_select.set_color(c)
+            self._update_labels()
         elif self.color_coding_mode == 1:
             # Channels
              #TODO - in prefs, color.get_colormaps()
@@ -580,6 +588,7 @@ class SignalDisplay(QWidget):
             for pc, c in zip(pcs, colors):
                 pc.line_color = c.rgba[0]
                 pc.container.item_widget.color_select.set_color(c.rgba[0])
+            self._update_labels()
             # Acquire the colors based on number of channels
             # ???Introduce a limit??? If not the channels might be too simliar
         elif self.color_coding_mode == 2:
@@ -601,12 +610,15 @@ class SignalDisplay(QWidget):
                 for pc in g_pcs:
                     pc.line_color = c.rgba[0]
                     pc.container.item_widget.color_select.set_color(c.rgba[0])
+            self._update_labels()
 
         elif self.color_coding_mode == 3:
             # Amplitude
             pass
         else:
             pass
+
+        self._update_signals()
 
     # ----- Autoslide -----
     def autoslide(self):
@@ -655,9 +667,7 @@ class SignalDisplay(QWidget):
         self.canvas.native.setFocus()
 
     # ----- Data handling -----
-    def get_minmax_idxs(self, b, sig, step):
-
-        sig = sig[b[0]:b[1]]
+    def get_minmax_idxs(self, sig, step):
 
         N = int(np.ceil(len(sig) / step))
 
@@ -672,12 +682,10 @@ class SignalDisplay(QWidget):
         min_idx += (np.arange(N)*step)
         min_idx[min_idx >= len(sig)] = len(sig) - 1
 
-        max_idx += b[0]
-        min_idx += b[0]
-
         return max_idx, min_idx
 
     def subsample(self):
+
         rect = self.signal_view.camera.rect
         w = rect.width
         max_viewed_points = 10000
@@ -690,34 +698,35 @@ class SignalDisplay(QWidget):
         if right > 1:
             right = 1
 
-        for pc in self.get_plot_containers():
-            line = pc.visual
-            n_points = len(line.pos)*w
-            fraction = int(n_points // max_viewed_points)
+        vis_pos = self.signal_visual.pos
+        vis_index = self.signal_visual.index
+        indices = np.hstack([0, np.cumsum([len(x) for x in vis_pos])[:-1]])
 
-            li = int(np.floor(left*len(line.pos)))
-            ri = int(np.floor(right*len(line.pos)))
+        for pc in self.get_plot_containers():
+            pos_i= pc._visual_array_idx
+            line_len = len(vis_pos[pos_i])
+            fraction = int((line_len * w) // max_viewed_points)
+
+            li = int(np.floor(left*line_len))
+            ri = int(np.floor(right*line_len))
 
             if fraction <= 1:
-                new_index = np.zeros(len(line.pos), 'bool')
-                new_index[li:ri] = 1
-                line.index = new_index
+                vis_index[indices[pos_i]:indices[pos_i]+line_len] = 0
+                vis_index[li + indices[pos_i]:ri + indices[pos_i]] = 1
+
 
             else:
-                if line.pos.shape[1] >= 2:
-                    max_idx, min_idx = self.get_minmax_idxs([li, ri],
-                                                            line.pos[:, 1],
-                                                            fraction)
-                else:
-                    max_idx, min_idx = self.get_minmax_idxs([li, ri],
-                                                            line.pos[:],
-                                                            fraction)
+                max_idx, min_idx = self.get_minmax_idxs(vis_pos[pos_i][li:ri],
+                                                        fraction)
 
-                new_index = np.zeros(len(line.pos), 'bool')
-                new_index[max_idx] = 1
-                new_index[min_idx] = 1
+                # Corect the max min indices to line pos
+                max_idx += (li + indices[pos_i])
+                min_idx += (li + indices[pos_i])
 
-                line.index = new_index
+                vis_index[indices[pos_i]:indices[pos_i]+line_len] = 0
+                vis_index[(max_idx) & (min_idx)] = 1
+
+        self.signal_visual.index = vis_index
 
     # ----- Discontinuities -----
     def create_conglomerate_disconts(self):
@@ -858,12 +867,11 @@ class SignalDisplay(QWidget):
             pc.N = None
 
         c = hex2rgba(CONF.get(self.CONF_SECTION, 'init_line_color'))
-        w = CONF.get(self.CONF_SECTION, 'init_line_width')
+
         pc.line_color = np.array(c)
-        pc.visual = SimpleLine(color=c, width=w,
-                               parent=self.signal_view.scene)
-        pc.label = Text(orig_channel, color=c, anchor_x='left', anchor_y='top',
-                        parent=self.signal_view.scene)
+
+        self.signal_label_dict[pc] = {'pos': [0, 0, 0],
+                                      'color': 'black'}
 
         pc.data_array_pos = [np.where(ci)[0][0]]
 
@@ -880,8 +888,8 @@ class SignalDisplay(QWidget):
         return pc
 
     def remove_plot_container(self, pc):
-        pc.visual.parent = None
-        pc.label.parent = None
+        self.signal_label_dict.pop(pc)
+        self.set_plot_data()
 
     def side_flash(self, color=None):
 
@@ -982,7 +990,6 @@ class SignalDisplay(QWidget):
         # This check whether provider data source is a buffer
         if getattr(sm.PDS, "is_available", None):
             while not sm.PDS.is_available(self.data_map):
-#                print('Checking availability')
                 sleep(0.1)
                 continue
 
@@ -991,15 +998,15 @@ class SignalDisplay(QWidget):
         pcs = self.get_plot_containers()
         for pc in pcs:
             start, stop = self.calculate_sample(pc)
-            pc.set_data(np.array([x[start:stop] for x
-                                  in self.data_array[pc.data_array_pos]]))
+            pc.data = np.array([x[start:stop] for x
+                                in self.data_array[pc.data_array_pos]])
 
         if first_load:
             self.autoscale_plot_data(pcs[0])
             for pc in pcs[1:]:
                 pc.scale_factor = pcs[0].scale_factor
 
-        self.update_visual_positions()
+        self._update_signals()
 
         if self.resize_flag:
             self.resize_flag = False
@@ -1008,35 +1015,76 @@ class SignalDisplay(QWidget):
 
         return
 
-    def update_visual_positions(self):
-        for pc in self.get_plot_containers():
+    # ----- Signal updating functions -----
+
+    def _update_labels(self):
+        """
+        Update names, positions and labels
+        """
+
+        name_list = []
+        pos_list = []
+        color_list = []
+        for pc, data_dict in self.signal_label_dict.items():
+
+            if self.signal_visual.visibility[pc._visual_array_idx]:
+                name_list.append(pc.name)
+                pos_list.append(data_dict['pos'])
+                color_list.append(pc.line_color)
+
+        self.label_visual.text = name_list
+        self.label_visual.pos = pos_list
+        self.label_visual.color = np.c_[color_list]
+
+    def _update_signals(self):
+
+        scales = []
+        offsets = []
+        color_list = []
+        data = np.empty(len(self.get_plot_containers()), object)
+        visibility = []
+        for li, pc in enumerate(self.get_plot_containers()):
+
+            data[li] = pc.data
+            pc._visual_array_idx = li
+
+            visibility.append(pc.visible)
+
             if pc.autoscale:
                 self.autoscale_plot_data(pc)
 
             # Scale
-            s_x = 1/len(pc.visual.pos)
+            s_x = 1/len(pc.data)
             s_y = pc.ufact*pc.scale_factor
             s_z = 0
-            s = (s_x, s_y, s_z)
+            scales.append([s_x, s_y, s_z])
 
             # Translate
             t_x = pc.plot_position[0]
-            t_y = ((-np.nanmean(pc.visual.pos[:, 1])
+            t_y = ((-np.nanmean(pc.data)
                     * pc.ufact
                     * pc.scale_factor)
                    + ((0.5+pc.plot_position[1])
                    / self.visible_channels.get_row_count()))
             t_z = pc.plot_position[2]
-            t = (t_x, t_y, t_z)
-            pc.visual.transform = scene.transforms.STTransform(s, t)
+            offsets.append([t_x, t_y, t_z])
 
             # Label position
             l_x = pc.plot_position[0]
             l_y = pc.plot_position[1] / self.visible_channels.get_row_count()
             l_y += 1 / self.visible_channels.get_row_count()
             y_shift = pc.plot_position[2] / self.canvas.central_widget.height
-            l_y -= y_shift * pc.label.font_size
-            pc.label.pos = [l_x, l_y, 0]
+            l_y -= y_shift * self.label_visual.font_size
+
+            self.signal_label_dict[pc]['pos'] = [l_x, l_y, 0]
+            color_list.append(pc.line_color)
+
+        self.signal_visual.set_data(pos=data,
+                                    scales=scales, offsets=offsets,
+                                    color=color_list,
+                                    visibility=visibility)
+
+        self._update_labels()
 
     def move_to_time(self, midpoint):
         """
@@ -1167,12 +1215,12 @@ class SignalDisplay(QWidget):
             else:
                 pc.scale_factor = pc.scale_factor / scale
 
-        self.update_visual_positions()
+        self._update_signals()
         return
 
     def autoscale_plot_data(self, pc):
-        amp_span = np.abs(np.nanmax(pc.visual.pos[:, 1])
-                          - np.nanmin(pc.visual.pos[:, 1]))
+        amp_span = np.abs(np.nanmax(pc.data)
+                          - np.nanmin(pc.data))
         row_span = 1 / self.visible_channels.get_row_count()
         pc.scale_factor = row_span / (amp_span * pc.ufact)
 

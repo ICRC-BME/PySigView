@@ -91,8 +91,8 @@ class PlotContainerItem(QTreeWidgetItem):
         # Connect signals
         self.item_widget.color_select.color_changed.connect(self.change_color)
         self.item_widget.check_box.stateChanged.connect(self.evaluate_check)
-        self.main.signal_display.plots_changed.connect(self.pvc.update_eas)
-        self.main.signal_display.plots_changed.connect(self.update_pas)
+        self.sd.plots_changed.connect(self.pvc.update_eas)
+        self.sd.plots_changed.connect(self.update_pas)
 
     def update_label(self):
         self.item_widget.set_edit_label(self.pvc.name)
@@ -100,14 +100,15 @@ class PlotContainerItem(QTreeWidgetItem):
 
     def change_color(self, color):
         self.pvc.line_color = hex2rgba(color.name()+'ff')
+        self.sd._update_signals()
 
     def evaluate_check(self):
         if self.item_widget.check_box.checkState():
-            self.pvc.visual.visible = True
-            self.pvc.label.visible = True
+            self.pvc.visible = True
         else:
-            self.pvc.visual.visible = False
-            self.pvc.label.visible = False
+            self.pvc.visible = False
+
+        self.sd._update_signals()
 
     def update_pas(self):
         for ea, pa in zip(self.pvc.exposed_attributes, self.pas):
@@ -154,6 +155,7 @@ class PlotCollectionItem(QTreeWidgetItem):
         self.setText(0, new_label)
 
 
+# TODO: change the style of class naming to confomr to the rest of pysigview
 class visible_channels(QTreeWidget):
 
     # Signals
@@ -526,7 +528,7 @@ class Channels(BasePluginWidget):
         self.visible_channels.items_reordered.connect(self.
                                                       main.
                                                       signal_display.
-                                                      update_visual_positions)
+                                                      _update_signals)
 
         # Slide in variables to signal view
         self.main.signal_display.hidden_channels = self.hidden_channels
@@ -560,6 +562,7 @@ class Channels(BasePluginWidget):
                 pvc.line_alpha = cont['pvc']['line_alpha']
                 pvc.autoscale = cont['pvc']['autoscale']
                 pvc.scale_factor = cont['pvc']['scale_factor']
+                pvc.visible = cont['pvc']['visible']
 
                 # TODO - transforms
 
@@ -597,6 +600,7 @@ class Channels(BasePluginWidget):
                     pvc['line_alpha'] = cont_i.pvc.line_alpha
                     pvc['scale_factor'] = cont_i.pvc.scale_factor
                     pvc['autoscale'] = cont_i.pvc.autoscale
+                    pvc['visible'] = cont_i.pvc.visible
 
                 container['pvc'] = pvc
 
