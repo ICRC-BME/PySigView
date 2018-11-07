@@ -8,8 +8,6 @@ from PyQt5.QtWidgets import (QVBoxLayout,QListWidget, QStackedWidget,
                              QComboBox, QLabel, QMessageBox, QPushButton,QHBoxLayout,
                              )
 
-from scipy.signal import butter, filtfilt
-
 # Local imports
 
 from pysigview.config.main import CONF
@@ -40,36 +38,10 @@ class Preferences(QWidget):
 
         # Form Widgets
         self._build_section_list()
-        # self.sections_selector = QListWidget()
-        # self.sections_selector.insertItem(0, 'section0')
-        # self.sections_selector.insertItem(1, 'section1')
-        # self.sections_selector.insertItem(2, 'section2')
 
         self.options_editor = QStackedWidget(self)
         self._build_option_stack()
 
-        # self.stack1 = QWidget()
-        # self.stack2 = QWidget()
-        # self.stack3 = QWidget()
-        #
-        # tmp_layout = QFormLayout()
-        # tmp_layout.addRow("Name", QLineEdit())
-        # tmp_layout.addRow("Address", QLineEdit())
-        #
-        # self.stack1.setLayout(tmp_layout)
-        #
-        # tmp_layout = QFormLayout()
-        # sex = QHBoxLayout()
-        # sex.addWidget(QRadioButton("Male"))
-        # sex.addWidget(QRadioButton("Female"))
-        # tmp_layout.addRow(QLabel("Sex"), sex)
-        # tmp_layout.addRow("Date of Birth", QLineEdit())
-        # self.stack2.setLayout(tmp_layout)
-        # self.stack3.setLayout(tmp_layout)
-
-        # self.options_editor.addWidget(self.stack1)
-        # self.options_editor.addWidget(self.stack2)
-        # self.options_editor.addWidget(self.stack3)
 
         layout.addWidget(self.butt_load, 9, 1, 1, 2, alignment=Qt.AlignBottom)
         layout.addWidget(self.butt_save, 9, 4, 1, 2, alignment=Qt.AlignBottom)
