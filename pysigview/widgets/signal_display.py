@@ -370,9 +370,7 @@ class SignalDisplay(QWidget):
         self.input_recieved.emit(event)
 
     def on_mouse_release(self, event):
-        modifiers = event.modifiers
-        if 2 in event.buttons and not modifiers:
-            self.subsample()
+        self.subsample()
 
     def on_mouse_wheel(self, event):
 
@@ -995,21 +993,13 @@ class SignalDisplay(QWidget):
                 sleep(0.1)
                 continue
 
-        t = time()
-
         self.data_array = sm.PDS.get_data(self.data_map)
-
-        print('Data loaded in',time()-t)
-
-        t = time()
 
         pcs = self.get_plot_containers()
         for pc in pcs:
             start, stop = self.calculate_sample(pc)
             pc.data = np.array([x[start:stop] for x
                                 in self.data_array[pc.data_array_pos]])
-
-        print('Data in containers in',time() - t)
 
         if first_load:
             self.autoscale_plot_data(pcs[0])
