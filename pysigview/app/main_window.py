@@ -908,7 +908,7 @@ class MainWindow(QMainWindow):
     # ----- Preferences
     def open_preferences(self):
 
-        # FIXME how should it be referenced?
+        # FIXME how it should be referenced?
         self.preferences_widget = Preferences()
 
     # ----- Shortcuts
