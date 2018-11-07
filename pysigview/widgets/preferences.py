@@ -10,9 +10,11 @@ from PyQt5.QtWidgets import (QVBoxLayout,QListWidget, QStackedWidget, QCheckBox,
 from PyQt5.QtGui import QIntValidator
 
 # Local imports
-
+from pysigview.utils.qthelpers import hex2rgba, rgba2hex
 from pysigview.config.main import CONF
+from pysigview.widgets.color_button import ColorButton
 
+# Classes
 class Preferences(QWidget):
 
     #signals
@@ -25,6 +27,7 @@ class Preferences(QWidget):
         self.not_configurable = ['DEFAULTS', 'quick_layouts']
         self.sections = [section for section in CONF.sections()
                          if section not in self.not_configurable]
+        self.preferences_changed = {section: {} for section in self.sections}
 
         # Master layout
         layout = QGridLayout()
@@ -58,7 +61,7 @@ class Preferences(QWidget):
 
         # Connect signals
         self.sections_selector.currentRowChanged.connect(self._select_section)
-
+        self.butt_cancel.clicked.connect(self.close)
     # ----- create stacked widget functions ------
     def _select_section(self, sec):
         '''
@@ -92,15 +95,29 @@ class Preferences(QWidget):
             options = CONF.options(section=section)
             for option in options:
                 option_val = CONF.get(section, option)
+
                 if isinstance(option_val, bool):
                     tmp_widget = QCheckBox('On/Off')
                     tmp_widget.setChecked(True) if option_val else tmp_widget.setChecked(False)
+                    tmp_widget.stateChanged.connect(self._write_change(self._boolean_state, section, option))
 
                 if isinstance(option_val, str):
+                    # TODO take care of hexa strings withou alpha channel
+                    if (len(option_val) == 9) & (option_val.startswith('#')):
+                        tmp_widget = QHBoxLayout()
+                        tmp_val = QLineEdit()
+                        tmp_val.setText(option_val)
+                        tmp_val.setMaxLength(9)
 
-                    tmp_widget = QLineEdit()
-                    tmp_widget.setMaxLength(100)
-                    tmp_widget.setText(option_val)
+                        tmp_col = ColorButton(hex2rgba(option_val))
+                        tmp_widget.addWidget(tmp_val)
+                        tmp_widget.addWidget(tmp_col)
+
+                    else:
+                        tmp_widget = QLineEdit()
+                        tmp_widget.setMaxLength(100)
+                        tmp_widget.setText(option_val)
+                        #tmp_widget.editingFinished.connect(lambda:self._line_edit(tmp_widget))
 
                 if isinstance(option_val, tuple) | isinstance(option_val, tuple):
                     tmp_widget = QHBoxLayout()
@@ -122,7 +139,24 @@ class Preferences(QWidget):
             self.stack_layout_dict[section] = tmp
             self.options_editor.addWidget(tmp)
 
+    # ----- modifying functions for dynamic signals ----
+    def _boolean_state(self):
+        tmp_widget = self.sender()
+        if tmp_widget.isChecked():
+            return True
+        else:
+            return False
+
+    def _write_change(self, func, arg1, arg2):
+        def inner():
+            result = func()
+            self.preferences_changed[arg1][arg2] = result
+        return inner
+
+    def _line_edit(self, s):
+        print(s.text())
     # ----- control button signals ------
+
     def close_widget(self):
         '''
             close button press action
