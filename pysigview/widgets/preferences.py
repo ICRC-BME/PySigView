@@ -33,39 +33,39 @@ class Preferences(QWidget):
         self.butt_cancel = QPushButton('Cancel')
 
         # Labels
-        self.sections_label = QLabel('Preferences Sections:')
-        self.options_label = QLabel('Options')
+        self.sections_label = QLabel('Preferences sections_selector:')
+        self.options_label = QLabel('options_editor')
 
         # Form Widgets
-        self.sections = QListWidget()
-        self.sections.insertItem(0, 'section0')
-        self.sections.insertItem(1, 'section1')
-        self.sections.insertItem(2, 'section2')
+        self.sections_selector = QListWidget()
+        self.sections_selector.insertItem(0, 'section0')
+        self.sections_selector.insertItem(1, 'section1')
+        self.sections_selector.insertItem(2, 'section2')
 
-        self.options = QStackedWidget(self)
+        self.options_editor = QStackedWidget(self)
 
         self.stack1 = QWidget()
         self.stack2 = QWidget()
         self.stack3 = QWidget()
 
-        layout = QFormLayout()
-        layout.addRow("Name", QLineEdit())
-        layout.addRow("Address", QLineEdit())
+        tmp_layout = QFormLayout()
+        tmp_layout.addRow("Name", QLineEdit())
+        tmp_layout.addRow("Address", QLineEdit())
 
-        self.stack1.setLayout(layout)
+        self.stack1.setLayout(tmp_layout)
 
-        layout = QFormLayout()
+        tmp_layout = QFormLayout()
         sex = QHBoxLayout()
         sex.addWidget(QRadioButton("Male"))
         sex.addWidget(QRadioButton("Female"))
-        layout.addRow(QLabel("Sex"), sex)
-        layout.addRow("Date of Birth", QLineEdit())
-        self.stack2.setLayout(layout)
-        self.stack3.setLayout(layout)
+        tmp_layout.addRow(QLabel("Sex"), sex)
+        tmp_layout.addRow("Date of Birth", QLineEdit())
+        self.stack2.setLayout(tmp_layout)
+        self.stack3.setLayout(tmp_layout)
 
-        self.options.addWidget(self.stack1)
-        self.options.addWidget(self.stack2)
-        self.options.addWidget(self.stack3)
+        self.options_editor.addWidget(self.stack1)
+        self.options_editor.addWidget(self.stack2)
+        self.options_editor.addWidget(self.stack3)
 
         layout.addWidget(self.butt_load, 9, 1, 1, 2, alignment=Qt.AlignBottom)
         layout.addWidget(self.butt_save, 9, 4, 1, 2, alignment=Qt.AlignBottom)
@@ -76,14 +76,14 @@ class Preferences(QWidget):
         layout.addWidget(self.options_editor, 1, 4, 4, 3)
 
         self.setLayout(layout)
-
+        self.show()
 
         # Connect signals
-        self.sections.currentRowChanged.connect(self._select_section)
+        self.sections_selector.currentRowChanged.connect(self._select_section)
 
     # ----- create stacked widget functions ------
     def _select_section(self, sec):
-        self.options.setCurrentIndex(sec)
+        self.options_editor.setCurrentIndex(sec)
 
     # ----- control button signals ------
     def close_widget(self):

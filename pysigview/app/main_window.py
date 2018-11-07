@@ -63,7 +63,7 @@ from pysigview.config.utils import get_image_path, get_home_dir
 # from pysigview.config.system import SYS_INFO
 from pysigview.utils.qthelpers import add_actions, create_action
 from pysigview.widgets.dir_tree_dialog import DirTreeDialog
-
+from pysigview.widgets.preferences import Preferences
 # =============================================================================
 # Get configuration
 # =============================================================================
@@ -316,10 +316,16 @@ class MainWindow(QMainWindow):
                                     triggered=self.close,
                                     context=Qt.ApplicationShortcut)
 
+        preferences_action = create_action(self, '&Open preferences',
+                                           icon=None,
+                                           tip='&Open preferences for pysigview',
+                                           triggered=self.open_preferences,
+                                           context=Qt.ApplicationShortcut)
+
         self.file_menu_actions = [open_f_action, open_s_action, None,
                                   connect_s_action, None,
                                   open_ss_action, save_ss_action, None,
-                                  exit_action]
+                                  exit_action, preferences_action]
 
         self.set_splash("")
         self.splash.hide()
@@ -900,6 +906,10 @@ class MainWindow(QMainWindow):
         self.__update_fullscreen_action()
 
     # ----- Preferences
+    def open_preferences(self):
+
+        # FIXME how should it be referenced?
+        self.preferences_widget = Preferences()
 
     # ----- Shortcuts
 
