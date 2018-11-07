@@ -226,6 +226,7 @@ class MainWindow(QMainWindow):
         # ----- Load configuration file
 
         # TODO: this will contain key_map, parameters
+        # FIXME: for now config widget is in File_Menu
 
         # ----- Main widget
         self.set_splash("Setting up canvas ...")
