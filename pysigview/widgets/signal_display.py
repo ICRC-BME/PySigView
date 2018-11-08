@@ -46,6 +46,7 @@ from pysigview.core.source_manager import DataMap
 from pysigview.utils.qthelpers import (hex2rgba, create_toolbutton,
                                        create_plugin_layout)
 
+
 class SignalDisplay(QWidget):
 
     # Attributes - tehcnically this is not a plugin but has the same attributes
@@ -371,6 +372,7 @@ class SignalDisplay(QWidget):
 
     def on_mouse_release(self, event):
         self.subsample()
+        self.update_labels()
 
     def on_mouse_wheel(self, event):
 
@@ -495,7 +497,7 @@ class SignalDisplay(QWidget):
             else:
                 pc.autoscale = True
 
-        self._update_signals()
+        self.update_signals()
 
     # ----- Save displayed data -----
     def save_displayed_data(self):
@@ -578,7 +580,7 @@ class SignalDisplay(QWidget):
             for pc in pcs:
                 pc.line_color = c
                 pc.container.item_widget.color_select.set_color(c)
-            self._update_labels()
+            self.update_labels()
         elif self.color_coding_mode == 1:
             # Channels
              #TODO - in prefs, color.get_colormaps()
@@ -588,7 +590,7 @@ class SignalDisplay(QWidget):
             for pc, c in zip(pcs, colors):
                 pc.line_color = c.rgba[0]
                 pc.container.item_widget.color_select.set_color(c.rgba[0])
-            self._update_labels()
+            self.update_labels()
             # Acquire the colors based on number of channels
             # ???Introduce a limit??? If not the channels might be too simliar
         elif self.color_coding_mode == 2:
@@ -610,7 +612,7 @@ class SignalDisplay(QWidget):
                 for pc in g_pcs:
                     pc.line_color = c.rgba[0]
                     pc.container.item_widget.color_select.set_color(c.rgba[0])
-            self._update_labels()
+            self.update_labels()
 
         elif self.color_coding_mode == 3:
             # Amplitude
@@ -618,7 +620,7 @@ class SignalDisplay(QWidget):
         else:
             pass
 
-        self._update_signals()
+        self.update_signals()
 
     # ----- Autoslide -----
     def autoslide(self):
@@ -703,7 +705,7 @@ class SignalDisplay(QWidget):
         indices = np.hstack([0, np.cumsum([len(x) for x in vis_pos])[:-1]])
 
         for pc in self.get_plot_containers():
-            pos_i= pc._visual_array_idx
+            pos_i = pc._visual_array_idx
             line_len = len(vis_pos[pos_i])
             fraction = int((line_len * w) // max_viewed_points)
 
@@ -713,7 +715,6 @@ class SignalDisplay(QWidget):
             if fraction <= 1:
                 vis_index[indices[pos_i]:indices[pos_i]+line_len] = 0
                 vis_index[li + indices[pos_i]:ri + indices[pos_i]] = 1
-
 
             else:
                 max_idx, min_idx = self.get_minmax_idxs(vis_pos[pos_i][li:ri],
@@ -731,7 +732,7 @@ class SignalDisplay(QWidget):
     # ----- Discontinuities -----
     def create_conglomerate_disconts(self):
 
-        #TODO: what if the channels are changed? This should not be run!
+        # TODO: what if the channels are changed? This should not be run!
 
         disconts = sm.ODS.data_map['discontinuities']
         chan_mask = self.main.signal_display.data_map['ch_set']
@@ -1006,7 +1007,7 @@ class SignalDisplay(QWidget):
             for pc in pcs[1:]:
                 pc.scale_factor = pcs[0].scale_factor
 
-        self._update_signals()
+        self.update_signals()
 
         if self.resize_flag:
             self.resize_flag = False
@@ -1017,7 +1018,7 @@ class SignalDisplay(QWidget):
 
     # ----- Signal updating functions -----
 
-    def _update_labels(self):
+    def update_labels(self):
         """
         Update names, positions and labels
         """
@@ -1029,14 +1030,23 @@ class SignalDisplay(QWidget):
 
             if self.signal_visual.visibility[pc._visual_array_idx]:
                 name_list.append(pc.name)
-                pos_list.append(data_dict['pos'])
                 color_list.append(pc.line_color)
+
+                # Label position
+                l_x = pc.plot_position[0]
+                l_y = (pc.plot_position[1]
+                       / self.visible_channels.get_row_count())
+                l_y += 1 / self.visible_channels.get_row_count()
+                y_shift = (pc.plot_position[2]
+                           / self.canvas.central_widget.height)
+                l_y -= y_shift * self.label_visual.font_size
+                pos_list.append([l_x, l_y, 0])
 
         self.label_visual.text = name_list
         self.label_visual.pos = pos_list
         self.label_visual.color = np.c_[color_list]
 
-    def _update_signals(self):
+    def update_signals(self):
 
         scales = []
         offsets = []
@@ -1069,14 +1079,6 @@ class SignalDisplay(QWidget):
             t_z = pc.plot_position[2]
             offsets.append([t_x, t_y, t_z])
 
-            # Label position
-            l_x = pc.plot_position[0]
-            l_y = pc.plot_position[1] / self.visible_channels.get_row_count()
-            l_y += 1 / self.visible_channels.get_row_count()
-            y_shift = pc.plot_position[2] / self.canvas.central_widget.height
-            l_y -= y_shift * self.label_visual.font_size
-
-            self.signal_label_dict[pc]['pos'] = [l_x, l_y, 0]
             color_list.append(pc.line_color)
 
         self.signal_visual.set_data(pos=data,
@@ -1084,7 +1086,7 @@ class SignalDisplay(QWidget):
                                     color=color_list,
                                     visibility=visibility)
 
-        self._update_labels()
+        self.update_labels()
 
     def move_to_time(self, midpoint):
         """
@@ -1215,7 +1217,7 @@ class SignalDisplay(QWidget):
             else:
                 pc.scale_factor = pc.scale_factor / scale
 
-        self._update_signals()
+        self.update_signals()
         return
 
     def autoscale_plot_data(self, pc):

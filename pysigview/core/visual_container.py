@@ -174,7 +174,7 @@ class SignalContainer(BaseVisualContainer):
         self.transform_chain.pop(transform)
         if self.container is not None:
             self.container.update_label()
-            
+
     def subsample_data(self, data):
 
         # TODO - consider using numpy.fft to get rid of scipy dependency
