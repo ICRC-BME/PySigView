@@ -1023,6 +1023,10 @@ class SignalDisplay(QWidget):
         Update names, positions and labels
         """
 
+        # Get current view left boundry
+        rect = self.signal_view.camera.rect
+        left = rect.left
+
         name_list = []
         pos_list = []
         color_list = []
@@ -1033,7 +1037,7 @@ class SignalDisplay(QWidget):
                 color_list.append(pc.line_color)
 
                 # Label position
-                l_x = pc.plot_position[0]
+                l_x = pc.plot_position[0] + left
                 l_y = (pc.plot_position[1]
                        / self.visible_channels.get_row_count())
                 l_y += 1 / self.visible_channels.get_row_count()
