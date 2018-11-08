@@ -3,9 +3,9 @@
 
 # Third party imports
 from PyQt5.QtCore import pyqtSignal, Qt
-from PyQt5.QtWidgets import (QVBoxLayout,QListWidget, QStackedWidget, QCheckBox,
-                             QWidget, QLineEdit, QGridLayout, QFormLayout,QRadioButton,
-                             QComboBox, QLabel, QMessageBox, QPushButton,QHBoxLayout,
+from PyQt5.QtWidgets import (QListWidget, QStackedWidget, QCheckBox,
+                             QWidget, QLineEdit, QGridLayout, QFormLayout,
+                             QLabel,  QPushButton,QHBoxLayout,
                              )
 from PyQt5.QtGui import QIntValidator
 
@@ -14,15 +14,17 @@ from pysigview.utils.qthelpers import hex2rgba, rgba2hex
 from pysigview.config.main import CONF
 from pysigview.widgets.color_button import ColorButton
 
+
 # Classes
 class Preferences(QWidget):
 
-    #signals
+    # signals
     preferences_updated = pyqtSignal(name='preferences_updated')
 
     def __init__(self, parent=None):
         super(Preferences, self).__init__(parent)
 
+        # basic class atributes
         self.title = 'Preferences'
         self.not_configurable = ['DEFAULTS', 'quick_layouts']
         self.sections = [section for section in CONF.sections()
@@ -43,12 +45,14 @@ class Preferences(QWidget):
         self.sections_label = QLabel('Preferences sections:')
         self.options_label = QLabel('options_editor')
 
-        # Form Widgets
+        # Form Widgets for selection of config section
         self._build_section_list()
 
+        # Stacked option forms for selected config form
         self.options_editor = QStackedWidget(self)
         self._build_option_stack()
 
+        # preferences grid layout setup
         layout.addWidget(self.butt_load, 9, 1, 1, 2, alignment=Qt.AlignBottom)
         layout.addWidget(self.butt_save, 9, 4, 1, 2, alignment=Qt.AlignBottom)
         layout.addWidget(self.butt_cancel, 9, 6, 1, 2, alignment=Qt.AlignBottom)
@@ -60,9 +64,10 @@ class Preferences(QWidget):
         self.setLayout(layout)
         self.show()
 
-        # Connect signals
+        # Connect main layout signals
         self.sections_selector.currentRowChanged.connect(self._select_section)
-        self.butt_cancel.clicked.connect(self.close)
+        self.butt_cancel.clicked.connect(self.close_widget)
+        self.butt_save.clicked.connect(self.save_preferences)
 
     # ----- create stacked widget functions ------
     def _select_section(self, sec):
@@ -102,12 +107,14 @@ class Preferences(QWidget):
                 option_val = CONF.get(section, option)
 
                 name_reference = section + '||' + option
+                # boolean (true/False) setup
                 if isinstance(option_val, bool):
                     tmp_widget = QCheckBox('On/Off')
                     tmp_widget.setObjectName(name_reference)
                     tmp_widget.setChecked(True) if option_val else tmp_widget.setChecked(False)
                     tmp_widget.stateChanged.connect(self._boolean_state)
 
+                # one string or color setup
                 if isinstance(option_val, str):
                     # TODO take care of hexa strings withou alpha channel
                     if (len(option_val) == 9) & (option_val.startswith('#')):
@@ -123,25 +130,28 @@ class Preferences(QWidget):
                         tmp_widget = PreferenceLineedit(option_val, name_reference, max_len=100)
                         tmp_widget.editingFinished.connect(self._line_edit)
 
+                # configuration of list (multiple selection)
                 if isinstance(option_val, tuple) | isinstance(option_val, list):
                     tmp_widget = QHBoxLayout()
-                    tmp_contain = []
+
                     for i, val in enumerate(option_val):
                         name_loc = name_reference + '||{}'.format(i)
                         validator = QIntValidator() if isinstance(val, int) else None
                         tmp_val = PreferenceLineedit(str(val), name_loc, validator=validator)
                         tmp_val.editingFinished.connect(self._line_edit_multi)
                         tmp_widget.addWidget(tmp_val)
-                        tmp_contain.append(None)
 
-                    self.preferences_changed[section][option] = tmp_contain
+                    self.preferences_changed[section][option] = list(option_val)
 
+                # configuration of single number
                 if isinstance(option_val, int) & ~isinstance(option_val, bool):
                     tmp_widget = PreferenceLineedit(str(option_val), name_reference, max_len=4,
                                                     validator=QIntValidator())
                     tmp_widget.editingFinished.connect(self._line_edit)
 
                 tmp_layout.addRow(str(option), tmp_widget)
+
+                # TODO future configuration of future selection from list
 
             tmp.setLayout(tmp_layout)
             self.stack_layout_dict[section] = tmp
@@ -176,17 +186,6 @@ class Preferences(QWidget):
         else:
             self.preferences_changed[pos_change[0]][pos_change[1]] = False
 
-    # def _write_change(self, func, arg1, arg2):
-    #     def inner():
-    #         result = func()
-    #         self.preferences_changed[arg1][arg2] = result
-    #         # print(self.widget_counter[arg1])
-    #         # ind = self.options[arg1].index(arg2)
-    #         # index = sum(self.widget_counter[arg1][:ind]) +  1
-    #         # myLayout = self.stack_layout_dict[arg1]
-    #         # tmp = myLayout.itemAt(index).widget()
-    #         # a =1
-    #     return inner
     def _line_edit_multi(self):
         tmp_widget = self.sender()
         pos_change = tmp_widget.objectName().split('||')
@@ -204,11 +203,6 @@ class Preferences(QWidget):
         else:
             self.preferences_changed[pos_change[0]][pos_change[1]] = tmp_widget.text()
 
-    def _line_edit_int(self):
-        tmp_widget = self.sender()
-        pos_change = tmp_widget.objectName().split('||')
-        self.preferences_changed[pos_change[0]][pos_change[1]] = int(tmp_widget.text())
-
     # ----- control button signals ------
 
     def close_widget(self):
@@ -216,21 +210,29 @@ class Preferences(QWidget):
             close button press action
         :return:
         '''
-        pass
+        self.close()
 
     def save_preferences(self):
         '''
             save and update preferences
         :return:
         '''
-        pass
+        for section in self.preferences_changed.keys():
+            for option in self.preferences_changed[section].keys():
+                CONF.set(section, option, self.preferences_changed[section][option])
+                # if isinstance(self.preferences_changed[section][option], list):
+                #     CONF.set(section, option, set(self.preferences_changed[section][option]))
+                # else:
+                #     CONF.set(section, option, self.preferences_changed[section][option])
+
+        self.preferences_updated.emit()
 
     def load_preferences(self):
         '''
             load different preferences ini file
         :return:
         '''
-        # TODO load different preferences file
+        # TODO load different preference file
         pass
 
 
