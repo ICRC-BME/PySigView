@@ -272,7 +272,7 @@ class AnnotationSet(QTreeWidgetItem):
         if self.item_widget.check_box.checkState():
             self.plot_data = True
             self.plot_set()
-            
+
             # Perform plot_set on annotation sets below this one
             annot_sets_n = self.annotation_list.topLevelItemCount()
             self_i = self.annotation_list.indexOfTopLevelItem(self)
@@ -280,11 +280,11 @@ class AnnotationSet(QTreeWidgetItem):
                 ann_set = self.annotation_list.topLevelItem(i)
                 if i > self_i:
                     ann_set.plot_set()
-            
+
         else:
             self.plot_data = False
             self.plot_set()
-            
+
             # Perform plot_set on other annotation sets
             annot_sets_n = self.annotation_list.topLevelItemCount()
             for i in range(annot_sets_n):
@@ -520,7 +520,7 @@ class AnnotationSet(QTreeWidgetItem):
                         view_stop = ann['end_time'] - ch_ss[0]
                         start = int((view_start / np.diff(ch_ss)) * n_samp)
                         stop = int((view_stop / np.diff(ch_ss)) * n_samp)
-                        
+
                         if start < 0:
                             start = 0
                         if stop > n_samp:
@@ -532,22 +532,22 @@ class AnnotationSet(QTreeWidgetItem):
                             line_stops.append(stop)
                             line_colors.append(color)
                             line_draw.append(True)
-                            
+
                         else:
                             line_idxs.append(pc._visual_array_idx)
                             line_starts.append(start)
                             line_stops.append(stop)
                             line_colors.append(pc.line_color)
                             line_draw.append(False)
-                
+
             if len(line_idxs):
-                
+
                 line_idxs = np.array(line_idxs)
                 line_starts = np.array(line_starts)
                 line_stops = np.array(line_stops)
                 line_colors = np.array(line_colors)
                 line_draw = np.array(line_draw)
-                
+
                 self.sd.signal_visual.set_line_color(line_colors,
                                                      line_idxs,
                                                      line_starts,
@@ -702,7 +702,7 @@ class AnnotationSubset(QTreeWidgetItem):
         if self.item_widget.check_box.checkState():
             self.plot_data = True
             self.parent().plot_set()
-            
+
             # Perform plot_set on annotation sets below this one
             annot_sets_n = self.annotation_list.topLevelItemCount()
             self_i = self.annotation_list.indexOfTopLevelItem(self)
@@ -710,11 +710,11 @@ class AnnotationSubset(QTreeWidgetItem):
                 ann_set = self.annotation_list.topLevelItem(i)
                 if i > self_i:
                     ann_set.plot_set()
-            
+
         else:
             self.plot_data = False
             self.parent().plot_set()
-            
+
             # Deleting - perform plot_set on other annotation sets
             annot_sets_n = self.parent().annotation_list.topLevelItemCount()
             for i in range(annot_sets_n):
@@ -853,7 +853,8 @@ class Annotations(BasePluginWidget):
         elif path.endswith('csv'):
             df = pd.read_csv(path, skipinitialspace=True)
         else:
-            QMessageBox.critical(self, "open message", "File format not supported")
+            QMessageBox.critical(self, "open message",
+                                 "File format not supported")
             return
 
         self.add_annotation_set(df)

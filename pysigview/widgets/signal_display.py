@@ -1020,8 +1020,6 @@ class SignalDisplay(QWidget):
         if self.resize_flag:
             self.resize_flag = False
 
-        self.plots_changed.emit()
-
         return
 
     # ----- Signal updating functions -----
@@ -1099,6 +1097,7 @@ class SignalDisplay(QWidget):
                                     visibility=visibility)
 
         self.update_labels()
+        self.plots_changed.emit()
 
     def move_to_time(self, midpoint):
         """
