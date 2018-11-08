@@ -63,6 +63,7 @@ class Preferences(QWidget):
         # Connect signals
         self.sections_selector.currentRowChanged.connect(self._select_section)
         self.butt_cancel.clicked.connect(self.close)
+
     # ----- create stacked widget functions ------
     def _select_section(self, sec):
         '''
@@ -90,7 +91,6 @@ class Preferences(QWidget):
 
         # temporary prototype
         self.stack_layout_dict = {}
-        self.widget_counter = {}
         self.options = {}
 
         for section in self.sections:
@@ -98,7 +98,6 @@ class Preferences(QWidget):
             tmp_layout = QFormLayout()
             options = CONF.options(section=section)
             self.options[section] = options
-            widget_counter = []
             for option in options:
                 option_val = CONF.get(section, option)
 
@@ -117,40 +116,38 @@ class Preferences(QWidget):
                         tmp_col = ColorButton(hex2rgba(option_val))
                         tmp_col.setObjectName(name_reference)
                         tmp_col.color_changed.connect(self._color_change)
-
+                        tmp_val.editingFinished.connect(self._color_change_hex)
                         tmp_widget.addWidget(tmp_val)
                         tmp_widget.addWidget(tmp_col)
                     else:
-                        tmp_widget = QLineEdit()
-                        tmp_widget.setMaxLength(100)
-                        tmp_widget.setText(option_val)
-                        tmp_widget.setObjectName(name_reference)
-                        tmp_widget.editingFinished.connect(self._line_edit_string)
+                        tmp_widget = PreferenceLineedit(option_val, name_reference, max_len=100)
+                        tmp_widget.editingFinished.connect(self._line_edit)
 
-                if isinstance(option_val, tuple) | isinstance(option_val, tuple):
+                if isinstance(option_val, tuple) | isinstance(option_val, list):
                     tmp_widget = QHBoxLayout()
-                    for val in option_val:
-                        tmp_val = QLineEdit()
-                        tmp_val.setText(str(val))
+                    tmp_contain = []
+                    for i, val in enumerate(option_val):
+                        name_loc = name_reference + '||{}'.format(i)
+                        validator = QIntValidator() if isinstance(val, int) else None
+                        tmp_val = PreferenceLineedit(str(val), name_loc, validator=validator)
+                        tmp_val.editingFinished.connect(self._line_edit_multi)
                         tmp_widget.addWidget(tmp_val)
+                        tmp_contain.append(None)
+
+                    self.preferences_changed[section][option] = tmp_contain
 
                 if isinstance(option_val, int) & ~isinstance(option_val, bool):
-                    tmp_widget = QLineEdit()
-                    tmp_widget.setMaxLength(100)
-                    tmp_widget.setValidator(QIntValidator())
-                    tmp_widget.setMaxLength(4)
-                    tmp_widget.setText(str(option_val))
-                    tmp_widget.setObjectName(name_reference)
-                    tmp_widget.editingFinished.connect(self._line_edit_int)
+                    tmp_widget = PreferenceLineedit(str(option_val), name_reference, max_len=4,
+                                                    validator=QIntValidator())
+                    tmp_widget.editingFinished.connect(self._line_edit)
 
                 tmp_layout.addRow(str(option), tmp_widget)
 
             tmp.setLayout(tmp_layout)
             self.stack_layout_dict[section] = tmp
-            self.widget_counter[section] = widget_counter
             self.options_editor.addWidget(tmp)
 
-    # ----- modifying functions for dynamic signals ----
+    # ----- functions saving signal function changes ----
     def _color_change(self, color):
         tmp_widget = self.sender()
         parent = tmp_widget.parent()
@@ -160,8 +157,16 @@ class Preferences(QWidget):
         child.setText(result)
         pos_change = name.split('||')
         self.preferences_changed[pos_change[0]][pos_change[1]] = result
-        #print(color.getRgbF())
-        #print(rgba2hex(color.getRgbF()))
+
+    def _color_change_hex(self):
+        tmp_widget = self.sender()
+        parent = tmp_widget.parent()
+        name = tmp_widget.objectName()
+        child = parent.findChild(QPushButton, name)
+        result = tmp_widget.text()
+        child.set_color(hex2rgba(result))
+        pos_change = name.split('||')
+        self.preferences_changed[pos_change[0]][pos_change[1]] = result
 
     def _boolean_state(self):
         tmp_widget = self.sender()
@@ -182,11 +187,22 @@ class Preferences(QWidget):
     #         # tmp = myLayout.itemAt(index).widget()
     #         # a =1
     #     return inner
-
-    def _line_edit_string(self):
+    def _line_edit_multi(self):
         tmp_widget = self.sender()
         pos_change = tmp_widget.objectName().split('||')
-        self.preferences_changed[pos_change[0]][pos_change[1]] = str(tmp_widget.text())
+
+        if isinstance(tmp_widget.validator(), QIntValidator):
+            self.preferences_changed[pos_change[0]][pos_change[1]][int(pos_change[2])] = int(tmp_widget.text())
+        else:
+            self.preferences_changed[pos_change[0]][pos_change[1]][int(pos_change[2])] = tmp_widget.text()
+
+    def _line_edit(self):
+        tmp_widget = self.sender()
+        pos_change = tmp_widget.objectName().split('||')
+        if isinstance(tmp_widget.validator(), QIntValidator):
+            self.preferences_changed[pos_change[0]][pos_change[1]] = int(tmp_widget.text())
+        else:
+            self.preferences_changed[pos_change[0]][pos_change[1]] = tmp_widget.text()
 
     def _line_edit_int(self):
         tmp_widget = self.sender()
