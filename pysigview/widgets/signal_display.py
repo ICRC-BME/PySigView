@@ -263,6 +263,8 @@ class SignalDisplay(QWidget):
         if event.handled:
             return
 
+        modifiers = event.modifiers
+
         plot_data_operators = ['up', 'down', 'left', 'right', 'q', 'a']
 
         # TODO: there should be a key mapper in the future! - python dictionary
@@ -283,10 +285,16 @@ class SignalDisplay(QWidget):
 
                 if event.key == 'Left':
                     self.plot_update_done = False
-                    self.shift_plot_data(False)
+                    if 'shift' in modifiers:  # Partial shift
+                        self.shift_plot_data(False, 0.5)
+                    else:
+                        self.shift_plot_data(False)
                 if event.key == 'Right':
                     self.plot_update_done = False
-                    self.shift_plot_data(True)
+                    if 'shift' in modifiers:  # Partial shift
+                        self.shift_plot_data(True, 0.5)
+                    else:
+                        self.shift_plot_data(True)
                 if event.key == 'q':
                     self.plot_update_done = False
                     self.change_time_span(True)
@@ -1130,12 +1138,18 @@ class SignalDisplay(QWidget):
                 self.move_to_time(midpoint_to_go)
                 return
 
-        if not shift_span:
-            if self.master_plot:
-                uutc_ss = self.master_plot.uutc_ss
-                span = np.diff(uutc_ss)
-            else:
-                span = np.diff(self.data_map.get_active_largest_ss())[0]
+        if self.master_plot:
+            uutc_ss = self.master_plot.uutc_ss
+            base_span = np.diff(uutc_ss)
+        else:
+            base_span = np.diff(self.data_map.get_active_largest_ss())[0]
+
+        if shift_span is None:
+            span = base_span
+        elif shift_span < 1:
+            span = base_span * shift_span
+        else:
+            span = shift_span
 
         a_channels = self.data_map.get_active_channels()
         a_uutc_ss = self.data_map.get_active_uutc_ss()
