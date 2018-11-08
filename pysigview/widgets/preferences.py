@@ -27,6 +27,7 @@ class Preferences(QWidget):
         self.not_configurable = ['DEFAULTS', 'quick_layouts']
         self.sections = [section for section in CONF.sections()
                          if section not in self.not_configurable]
+
         self.preferences_changed = {section: {} for section in self.sections}
 
         # Master layout
@@ -89,35 +90,42 @@ class Preferences(QWidget):
 
         # temporary prototype
         self.stack_layout_dict = {}
+        self.widget_counter = {}
+        self.options = {}
+
         for section in self.sections:
             tmp = QWidget()
             tmp_layout = QFormLayout()
             options = CONF.options(section=section)
+            self.options[section] = options
+            widget_counter = []
             for option in options:
                 option_val = CONF.get(section, option)
 
+                name_reference = section + '||' + option
                 if isinstance(option_val, bool):
                     tmp_widget = QCheckBox('On/Off')
+                    tmp_widget.setObjectName(name_reference)
                     tmp_widget.setChecked(True) if option_val else tmp_widget.setChecked(False)
-                    tmp_widget.stateChanged.connect(self._write_change(self._boolean_state, section, option))
+                    tmp_widget.stateChanged.connect(self._boolean_state)
 
                 if isinstance(option_val, str):
                     # TODO take care of hexa strings withou alpha channel
                     if (len(option_val) == 9) & (option_val.startswith('#')):
                         tmp_widget = QHBoxLayout()
-                        tmp_val = QLineEdit()
-                        tmp_val.setText(option_val)
-                        tmp_val.setMaxLength(9)
-
+                        tmp_val = PreferenceLineedit(option_val, name_reference, 9)
                         tmp_col = ColorButton(hex2rgba(option_val))
+                        tmp_col.setObjectName(name_reference)
+                        tmp_col.color_changed.connect(self._color_change)
+
                         tmp_widget.addWidget(tmp_val)
                         tmp_widget.addWidget(tmp_col)
-
                     else:
                         tmp_widget = QLineEdit()
                         tmp_widget.setMaxLength(100)
                         tmp_widget.setText(option_val)
-                        #tmp_widget.editingFinished.connect(lambda:self._line_edit(tmp_widget))
+                        tmp_widget.setObjectName(name_reference)
+                        tmp_widget.editingFinished.connect(self._line_edit_string)
 
                 if isinstance(option_val, tuple) | isinstance(option_val, tuple):
                     tmp_widget = QHBoxLayout()
@@ -132,29 +140,59 @@ class Preferences(QWidget):
                     tmp_widget.setValidator(QIntValidator())
                     tmp_widget.setMaxLength(4)
                     tmp_widget.setText(str(option_val))
+                    tmp_widget.setObjectName(name_reference)
+                    tmp_widget.editingFinished.connect(self._line_edit_int)
 
                 tmp_layout.addRow(str(option), tmp_widget)
 
             tmp.setLayout(tmp_layout)
             self.stack_layout_dict[section] = tmp
+            self.widget_counter[section] = widget_counter
             self.options_editor.addWidget(tmp)
 
     # ----- modifying functions for dynamic signals ----
+    def _color_change(self, color):
+        tmp_widget = self.sender()
+        parent = tmp_widget.parent()
+        name = tmp_widget.objectName()
+        child = parent.findChild(QLineEdit, name)
+        result = rgba2hex(color.getRgbF())
+        child.setText(result)
+        pos_change = name.split('||')
+        self.preferences_changed[pos_change[0]][pos_change[1]] = result
+        #print(color.getRgbF())
+        #print(rgba2hex(color.getRgbF()))
+
     def _boolean_state(self):
         tmp_widget = self.sender()
+        pos_change = tmp_widget.objectName().split('||')
         if tmp_widget.isChecked():
-            return True
+            self.preferences_changed[pos_change[0]][pos_change[1]] = True
         else:
-            return False
+            self.preferences_changed[pos_change[0]][pos_change[1]] = False
 
-    def _write_change(self, func, arg1, arg2):
-        def inner():
-            result = func()
-            self.preferences_changed[arg1][arg2] = result
-        return inner
+    # def _write_change(self, func, arg1, arg2):
+    #     def inner():
+    #         result = func()
+    #         self.preferences_changed[arg1][arg2] = result
+    #         # print(self.widget_counter[arg1])
+    #         # ind = self.options[arg1].index(arg2)
+    #         # index = sum(self.widget_counter[arg1][:ind]) +  1
+    #         # myLayout = self.stack_layout_dict[arg1]
+    #         # tmp = myLayout.itemAt(index).widget()
+    #         # a =1
+    #     return inner
 
-    def _line_edit(self, s):
-        print(s.text())
+    def _line_edit_string(self):
+        tmp_widget = self.sender()
+        pos_change = tmp_widget.objectName().split('||')
+        self.preferences_changed[pos_change[0]][pos_change[1]] = str(tmp_widget.text())
+
+    def _line_edit_int(self):
+        tmp_widget = self.sender()
+        pos_change = tmp_widget.objectName().split('||')
+        self.preferences_changed[pos_change[0]][pos_change[1]] = int(tmp_widget.text())
+
     # ----- control button signals ------
 
     def close_widget(self):
@@ -176,4 +214,22 @@ class Preferences(QWidget):
             load different preferences ini file
         :return:
         '''
+        # TODO load different preferences file
         pass
+
+
+# helper Classes
+class PreferenceLineedit(QLineEdit):
+
+    def __init__(self, value=None, name=None, max_len=None, validator=None, parent=None):
+        super(PreferenceLineedit, self).__init__(parent=parent)
+
+        if value is not None:
+            self.setText(value)
+        if name is not None:
+            self.setObjectName(name)
+        if max_len is not None:
+            self.setMaxLength(max_len)
+        if validator is not None:
+            self.setValidator(validator)
+

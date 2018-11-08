@@ -157,7 +157,7 @@ def tuple2keyevent(past_event):
 
 def rgba2hex(rgba):
     """Convert RGB to #hex"""
-    return '#%02x%02x%02x%02x' % ([int(x*255) for x in rgba])
+    return '#' + ''.join(['%02x' % int(x*255) for x in rgba])
 
 
 def hex2rgba(hex_str):
