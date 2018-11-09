@@ -574,6 +574,21 @@ class Channels(BasePluginWidget):
 
         return
 
+    def delete_plugin_data(self):
+        """Deletes plugin data"""
+
+        for item in self.visible_channels.get_collection_items():
+            coll_i = self.visible_channels.indexOfTopLevelItem(item)
+            containers = item.takeChildren()
+            for container in containers:
+                cont_i = item.indexOfChild(container)
+                self.sd.plots_changed.disconnect(container.update_pas)
+                self.sd.remove_plot_container(container.pvc)
+                item.takeChild(cont_i)
+            self.visible_channels.takeTopLevelItem(coll_i)
+
+        return
+
     def save_plugin_data(self):
         """Function to run when saving session"""
 

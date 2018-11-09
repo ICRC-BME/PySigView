@@ -1163,6 +1163,10 @@ class Annotations(BasePluginWidget):
 
         self.main.add_dockwidget(self)
 
+    def delete_plugin_data(self):
+        """Deletes plugin data"""
+        return None
+
     def load_plugin_data(self, data):
         """Function to run when loading session"""
 
