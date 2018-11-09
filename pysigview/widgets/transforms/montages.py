@@ -128,6 +128,8 @@ class Montages(QWidget):
         return
 
     def set_second_channel(self, ch_idx):
+        if ch_idx < 0:
+            return
         self.second_channel = self.channel_selector.itemText(ch_idx)
         self.second_channel_pos = np.where(sm.PDS.data_map['channels']
                                            == self.second_channel)[0][0]

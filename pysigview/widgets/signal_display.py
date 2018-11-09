@@ -898,7 +898,6 @@ class SignalDisplay(QWidget):
 
     def remove_plot_container(self, pc):
         self.signal_label_dict.pop(pc)
-        self.set_plot_data()
 
     def side_flash(self, color=None):
 
@@ -1052,9 +1051,12 @@ class SignalDisplay(QWidget):
                 l_y -= y_shift * self.label_visual.font_size
                 pos_list.append([l_x, l_y, 0])
 
-        self.label_visual.text = name_list
-        self.label_visual.pos = pos_list
-        self.label_visual.color = np.c_[color_list]
+        if len(name_list) == 0:
+            self.label_visual.text = None
+        else:
+            self.label_visual.text = name_list
+            self.label_visual.pos = pos_list
+            self.label_visual.color = np.c_[color_list]
 
     def update_signals(self):
 
@@ -1091,10 +1093,15 @@ class SignalDisplay(QWidget):
 
             color_list.append(pc.line_color)
 
-        self.signal_visual.set_data(pos=data,
-                                    scales=scales, offsets=offsets,
-                                    color=color_list,
-                                    visibility=visibility)
+        if len(data) == 0:
+            pos = np.empty(1, dtype=object)
+            pos[0] = np.array([0], dtype=np.float32)
+            self.signal_visual.pos = pos
+        else:
+            self.signal_visual.set_data(pos=data,
+                                        scales=scales, offsets=offsets,
+                                        color=color_list,
+                                        visibility=visibility)
 
         self.update_labels()
         self.plots_changed.emit()
