@@ -844,7 +844,7 @@ class MainWindow(QMainWindow):
                                 Qt.AlignAbsolute, QColor(Qt.black))
         QApplication.processEvents()
 
-    def closing(self, cancelable=False):
+    def closing(self, cancelable=True):
         """Exit tasks"""
         if self.already_closed or self.is_starting_up:
             return True
@@ -945,8 +945,8 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
 
-        self.closing()
-        event.accept()
+        if self.closing():
+            event.accept()
 
 
 # Main
