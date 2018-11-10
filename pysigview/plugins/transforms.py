@@ -270,6 +270,8 @@ class TransformButtons(QWidget):
         self.visible_channels.update_plot_positions()
         self.visible_channels.items_added.emit()
 
+        self.plugin.delete_plugin_data()
+
 
 class SignalPreview(QWidget):
     """
@@ -475,9 +477,6 @@ class Transforms(BasePluginWidget):
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
 
-        # TODO: Channel appli widget (will take care of choosing wether 
-        # we want a copy of the channel etc.)
-
         # Transform chain tree widget
         self.transform_view = TransformChainView(self)
 
@@ -543,6 +542,11 @@ class Transforms(BasePluginWidget):
 
     def delete_plugin_data(self):
         """Deletes plugin data"""
+
+        self.transform_view.clear()
+        self.signal_preview.orig_sig.pos = None
+        self.signal_preview.trans_sig.pos = None
+
         return None
 
     def load_plugin_data(self, data):
