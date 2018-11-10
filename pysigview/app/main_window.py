@@ -452,8 +452,10 @@ class MainWindow(QMainWindow):
         for plugin in self.plugin_list:
             plugin.delete_plugin_data()
 
+        # Delete data from signal_display
         self.signal_display.initialize_data_map()
         self.signal_display.update_signals()
+        self.signal_display.data_array = None
 
         # -----
 
