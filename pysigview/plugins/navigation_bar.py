@@ -519,6 +519,21 @@ class NavigationBar(BasePluginWidget):
 
         self.main.add_dockwidget(self)
 
+    def delete_plugin_data(self):
+        """Deletes plugin data"""
+
+        c = self.bar_widget.buffer_rgba
+        self.bar_widget.buffer_bar.set_data([0, 0], np.array([c, c]))
+
+        c = self.bar_widget.view_rgba
+        self.bar_widget.view_bar.set_data([0, 0], np.array([c, c]))
+
+        pos = np.arange(self.bar_widget.nav_view.size[0])
+        color = np.zeros([self.bar_widget.nav_view.size[0], 4])
+        self.bar_widget.disc_bar.set_data(pos, color)
+
+        return
+
     def load_plugin_data(self, data):
         """Function to run when loading session"""
         return None

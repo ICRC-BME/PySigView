@@ -99,9 +99,11 @@ class SimpleLineVisual(visuals.Visual):
 
     @pos.setter
     def pos(self, pos):
-        if self._pos is not None and len(pos) != len(self._pos):
-            self._index = None
-            self._changed['index'] = True
+
+        if pos is not None:
+            if self._pos is not None and len(pos) != len(self._pos):
+                self._index = None
+                self._changed['index'] = True
         self._pos = pos
         self._changed['pos'] = True
         self.update()

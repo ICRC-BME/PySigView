@@ -230,6 +230,10 @@ class BasePluginWidget(QWidget):
         """Register plugin in Pysigview's main window."""
         raise NotImplementedError
 
+    def delete_plugin_data(self):
+        """Deletes plugin data"""
+        return None
+
     def load_plugin_data(self, data):
         """Function to run when loading session"""
         return None

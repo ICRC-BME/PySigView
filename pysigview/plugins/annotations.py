@@ -168,6 +168,8 @@ class AnnotationList(QTreeWidget):
         else:
             item.plot_data = False
             item.plot_set()
+            item.ann_lines.parent = None
+            item.ann_reg.parent = None
             self.takeTopLevelItem(item_idx)
             self.parent().active_set = None
 
@@ -301,7 +303,7 @@ class AnnotationSet(QTreeWidgetItem):
 
     def plot_set(self):
 
-        # No data has been loadade yet
+        # No data has been loaded yet
         if not len(self.main.signal_display.data_map):
             return
 
@@ -1162,6 +1164,17 @@ class Annotations(BasePluginWidget):
                                                         recieve_input)
 
         self.main.add_dockwidget(self)
+
+    def delete_plugin_data(self):
+        """Deletes plugin data"""
+
+        for item in self.annotation_list.get_annotation_items():
+            item.ann_lines.parent = None
+            item.ann_reg.parent = None
+            item_idx = self.annotation_list.indexOfTopLevelItem(item)
+            self.annotation_list.takeTopLevelItem(item_idx)
+
+        return
 
     def load_plugin_data(self, data):
         """Function to run when loading session"""

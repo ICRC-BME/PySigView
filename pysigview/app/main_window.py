@@ -419,7 +419,7 @@ class MainWindow(QMainWindow):
         if not sm.ODS:
             QMessageBox.warning(self, "Unrecognized file")
             return
-        print(self.session_path)
+
         # Assign session or file path if not already set
         if ext == '.mefd':
 
@@ -440,6 +440,25 @@ class MainWindow(QMainWindow):
         elif not self.file_path:
             self.file_path = path
 
+        # ----- Delete previous data -----
+
+        # Delete any previous buffers
+        if isinstance(sm.PDS, MemoryBuffer):
+            sm.PDS.terminate_buffer()
+            sm.PDS.terminate_monitor_thread()
+            sm.PDS.purge_data()
+
+        # Delete data from plugins to be able to open new data source
+        for plugin in self.plugin_list:
+            plugin.delete_plugin_data()
+
+        # Delete data from signal_display
+        self.signal_display.initialize_data_map()
+        self.signal_display.update_signals()
+        self.signal_display.data_array = None
+
+        # -----
+
         self.statusBar().showMessage('Loading metadata')
         sm.ODS.load_metadata()
         self.statusBar().showMessage('Loading annotatios')
@@ -453,14 +472,13 @@ class MainWindow(QMainWindow):
                     self.annotations.add_annotation_set(ann_group[1],
                                                         ann_group[0])
 
-        self.statusBar().showMessage('')
-
         # Fork for buffer usage
-
         if CONF.get('data_management', 'use_memory_buffer'):
             sm.PDS = MemoryBuffer(self)
         else:
             sm.PDS = sm.ODS
+
+        self.statusBar().showMessage('')
 
         self.source_opened = True
         self.add_path_to_title()
@@ -523,6 +541,7 @@ class MainWindow(QMainWindow):
         self.server_port = self.port_le.text()
         self.server_type = self.sv_type_cb.currentText()
 
+    # TODO - tear_down for server
     def connect_to_server(self):
 
         print('Connecting to '+self.server_type,
@@ -558,6 +577,25 @@ class MainWindow(QMainWindow):
                 return
         else:
             return
+
+        # ----- Delete previous data -----
+
+        # Delete any previous buffers
+        if isinstance(sm.PDS, MemoryBuffer):
+            sm.PDS.terminate_buffer()
+            sm.PDS.terminate_monitor_thread()
+            sm.PDS.purge_data()
+
+        # Delete data from plugins to be able to open new data source
+        for plugin in self.plugin_list:
+            plugin.delete_plugin_data()
+
+        # Delete data from signal_display
+        self.signal_display.initialize_data_map()
+        self.signal_display.update_signals()
+        self.signal_display.data_array = None
+
+        # -----
 
         self.statusBar().showMessage('Loading metadata')
         sm.ODS.load_metadata()
@@ -844,7 +882,7 @@ class MainWindow(QMainWindow):
                                 Qt.AlignAbsolute, QColor(Qt.black))
         QApplication.processEvents()
 
-    def closing(self, cancelable=False):
+    def closing(self, cancelable=True):
         """Exit tasks"""
         if self.already_closed or self.is_starting_up:
             return True
@@ -945,8 +983,8 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
 
-        self.closing()
-        event.accept()
+        if self.closing():
+            event.accept()
 
 
 # Main
