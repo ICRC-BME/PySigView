@@ -578,6 +578,25 @@ class MainWindow(QMainWindow):
         else:
             return
 
+        # ----- Delete previous data -----
+
+        # Delete any previous buffers
+        if isinstance(sm.PDS, MemoryBuffer):
+            sm.PDS.terminate_buffer()
+            sm.PDS.terminate_monitor_thread()
+            sm.PDS.purge_data()
+
+        # Delete data from plugins to be able to open new data source
+        for plugin in self.plugin_list:
+            plugin.delete_plugin_data()
+
+        # Delete data from signal_display
+        self.signal_display.initialize_data_map()
+        self.signal_display.update_signals()
+        self.signal_display.data_array = None
+
+        # -----
+
         self.statusBar().showMessage('Loading metadata')
         sm.ODS.load_metadata()
         self.statusBar().showMessage('Loading annotatios')
