@@ -539,13 +539,6 @@ class AnnotationSet(QTreeWidgetItem):
                             line_stops.append(stop)
                             line_colors.append(pc.line_color)
 
-            if len(line_idxs):
-
-                self.sd.signal_visual.set_line_color(line_colors,
-                                                     line_idxs,
-                                                     line_starts,
-                                                     line_stops)
-
             # Uni lines
             pos_uni = np.concatenate((pos_ch_non_spec_uni,
                                       pos_ch_spec_uni))
@@ -575,6 +568,13 @@ class AnnotationSet(QTreeWidgetItem):
                                                                    4)
                 bi_dfs_pos.append(pos_bi)
                 bi_dfs_colors.append(bi_color_arr)
+
+        # Set signal coloring
+        if len(line_idxs):
+            self.sd.signal_visual.set_line_color(line_colors,
+                                                 line_idxs,
+                                                 line_starts,
+                                                 line_stops)
 
         # Uni
         if len(uni_dfs_pos):
@@ -662,6 +662,8 @@ class AnnotationSubset(QTreeWidgetItem):
         self.label_text = 'NA'
 
         self.plot_data = True
+        
+        self.annotation_list = self.parent().annotation_list
 
         # Widget settings
         self.item_widget = AnnotationItemWidget(self.label_text)
