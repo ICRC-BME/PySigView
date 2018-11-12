@@ -662,7 +662,7 @@ class AnnotationSubset(QTreeWidgetItem):
         self.label_text = 'NA'
 
         self.plot_data = True
-        
+
         self.annotation_list = self.parent().annotation_list
 
         # Widget settings
@@ -1026,6 +1026,11 @@ class Annotations(BasePluginWidget):
         if not self.as_le.text() in df.keys():
             QMessageBox.critical(self, "Column missing",
                                  'Annotation start is not in table')
+            return
+
+        if not self.ae_le.text() in df.keys():
+            QMessageBox.critical(self, "Column missing",
+                                 'Annotation stop is not in table')
             return
 
         if not self.ac_le.text() in df.keys():
