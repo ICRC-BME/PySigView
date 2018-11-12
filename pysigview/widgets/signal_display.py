@@ -37,6 +37,7 @@ from pysigview.cameras.signal_camera import SignalCamera
 from pysigview.core.visual_container import SignalContainer
 from pysigview.visuals.multicolor_text_visual import MulticolorText
 from pysigview.visuals.multiline_visual import Multiline
+from pysigview.visuals.crosshair_visual import Crosshair
 
 from pysigview.config.main import CONF
 from pysigview.config.utils import get_home_dir
@@ -82,6 +83,7 @@ class SignalDisplay(QWidget):
         self.master_plot = None
         self.resize_flag = False
         self.highlight_mode = False
+        self.measurement_mode = False
         self.autoscale = False
 
         self.disconts_processed = False
@@ -146,6 +148,8 @@ class SignalDisplay(QWidget):
         # ----- Initial visuals operations-----
 
         # TODO - for measurment mode - scene.visual_at() / visuals_at()
+        # TODO - Add crosshair color to CONF
+        self.crosshair = Crosshair(parent=self.signal_view.scene)
         self.highlight_rec = Mesh(parent=self.signal_view.scene,
                                   color=np.array([0., 0., 0., 0.]),
                                   mode='triangle_fan')
@@ -327,27 +331,33 @@ class SignalDisplay(QWidget):
         if event.type not in ('key_press', 'key_release'):
             return
 
-        if event.key not in ('shift', 'ctrl'):
+        if event.key not in ('shift', 'control'):
             return
 
         if event.type == 'key_press' and event.key == 'shift':
             self.highlight_mode = True
-        elif event.type == 'key_press' and event.key == 'ctrl':
+        elif event.type == 'key_press' and event.key == 'control':
             self.measurement_mode = True
-        else:
+            self.crosshair.visible = True
+        elif event.type == 'key_release' and event.key == 'shift':
             self.highlight_mode = False
-            self.measurement_mode = False
-
+            # ??? Uset visal.visible = False instead
             # Erase the rectangle
             self.highlight_rec.color = (0, 0, 0, 0.00001)
-
+        elif event.type == 'key_release' and event.key == 'control':
+            self.measurement_mode = False
             # Erase cursor cross
+            self.crosshair.visible = False
 
     def on_mouse_move(self, event):
+
+        # ??? Instead of modes use event.modifiers???
+
+        pos = event.pos[:2]
+
         if self.highlight_mode:
             # Determine the signal plot
             # Get cursor positions
-            pos = event.pos[:2]
 
             rows = self.visible_channels.get_row_count()
             cols = self.visible_channels.get_col_count()
@@ -374,6 +384,14 @@ class SignalDisplay(QWidget):
                          < pc.plot_position[1]+1)):
 
                     self.highlight_signal(pc)
+
+        if self.measurement_mode:
+            w = self.signal_view.width
+            h = self.signal_view.height
+            rel_w_pos = pos[0] / w
+            # TODO: flip Vispy axis
+            rel_h_pos = (h-pos[1]) / h
+            self.crosshair.set_data([rel_w_pos, rel_h_pos])
 
     def on_mouse_press(self, event):
         self.input_recieved.emit(event)

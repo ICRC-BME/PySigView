@@ -43,5 +43,7 @@ class CrosshairVisual(CompoundVisual):
             self._vline.set_data(pos[0], color)
             self._hline.set_data(pos[1], color)
 
+        self.update()
+
 
 Crosshair = create_visual_node(CrosshairVisual)
