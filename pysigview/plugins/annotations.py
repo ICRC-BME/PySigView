@@ -370,7 +370,6 @@ class AnnotationSet(QTreeWidgetItem):
         line_starts = []
         line_stops = []
         line_colors = []
-        line_draw = []
 
         for df, color, plot_flag, z_pos in plot_info:
 
@@ -533,22 +532,14 @@ class AnnotationSet(QTreeWidgetItem):
                             line_starts.append(start)
                             line_stops.append(stop)
                             line_colors.append(color)
-                            line_draw.append(True)
 
                         else:
                             line_idxs.append(pc._visual_array_idx)
                             line_starts.append(start)
                             line_stops.append(stop)
                             line_colors.append(pc.line_color)
-                            line_draw.append(False)
 
             if len(line_idxs):
-
-                line_idxs = np.array(line_idxs)
-                line_starts = np.array(line_starts)
-                line_stops = np.array(line_stops)
-                line_colors = np.array(line_colors)
-                line_draw = np.array(line_draw)
 
                 self.sd.signal_visual.set_line_color(line_colors,
                                                      line_idxs,
