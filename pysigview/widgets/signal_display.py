@@ -26,7 +26,7 @@ from PyQt5.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QPushButton,
                              QDialog, QFileDialog, QComboBox)
 from PyQt5.QtCore import Qt, pyqtSignal, QSize, QThread
 from vispy import scene, color
-from vispy.scene import LinearRegion, Image, Mesh, GridLines
+from vispy.scene import LinearRegion, Image, Mesh, GridLines, Markers
 from vispy.util.event import Event
 import numpy as np
 from scipy.io import savemat
@@ -147,9 +147,9 @@ class SignalDisplay(QWidget):
 
         # ----- Initial visuals operations-----
 
-        # TODO - for measurment mode - scene.visual_at() / visuals_at()
         # TODO - Add crosshair color to CONF
         self.crosshair = Crosshair(parent=self.signal_view.scene)
+        self.marker = Markers(parent=self.signal_view.scene)
         self.highlight_rec = Mesh(parent=self.signal_view.scene,
                                   color=np.array([0., 0., 0., 0.]),
                                   mode='triangle_fan')
@@ -340,12 +340,14 @@ class SignalDisplay(QWidget):
         elif event.type == 'key_press' and event.key == 'control':
             self.measurement_mode = True
             self.crosshair.visible = True
+            self.marker.visible = True
         elif event.type == 'key_release' and event.key == 'shift':
             self.highlight_mode = False
             self.highlight_rec.visible = False
         elif event.type == 'key_release' and event.key == 'control':
             self.measurement_mode = False
             self.crosshair.visible = False
+            self.marker.visible = False
 
     def on_mouse_move(self, event):
 
@@ -360,34 +362,49 @@ class SignalDisplay(QWidget):
         rect_rel_w_pos = rect.left + (rel_w_pos * rect.width)
         rect_rel_h_pos = rect.bottom + (rel_h_pos * rect.height)
         
+        # Determine the signal plot
+
+        rows = self.visible_channels.get_row_count()
+        cols = self.visible_channels.get_col_count()
+
+        sig_w_pos = rect_rel_w_pos * cols
+        sig_h_pos = rect_rel_h_pos * rows
+
+        for pc in self.get_plot_containers():
+
+            if ((pc.plot_position[0]
+                 < sig_w_pos
+                 < pc.plot_position[0]+1)
+                and (pc.plot_position[1]
+                     < sig_h_pos
+                     < pc.plot_position[1]+1)):
+                
+                curr_pc = pc
+        
         # ??? Instead of modes use event.modifiers???
 
         if self.highlight_mode:
-            # Determine the signal plot
-            # Get cursor positions
 
-            rows = self.visible_channels.get_row_count()
-            cols = self.visible_channels.get_col_count()
-
-            # Determine the signal plot
-
-            sig_w_pos = rect_rel_w_pos * cols
-            sig_h_pos = rect_rel_h_pos * rows
-
-            for pc in self.get_plot_containers():
-
-                if ((pc.plot_position[0]
-                     < sig_w_pos
-                     < pc.plot_position[0]+1)
-                    and (pc.plot_position[1]
-                         < sig_h_pos
-                         < pc.plot_position[1]+1)):
-
-                    self.highlight_signal(pc)
+            self.highlight_signal(curr_pc)
 
         if self.measurement_mode:
            
             self.crosshair.set_data([rect_rel_w_pos, rect_rel_h_pos])
+            
+            # Get the location of data point
+            s_y = curr_pc.ufact*curr_pc.scale_factor
+            t_y = ((-np.nanmean(curr_pc.data)
+                    * curr_pc.ufact
+                    * curr_pc.scale_factor)
+                   + ((0.5+curr_pc.plot_position[1])
+                   / self.visible_channels.get_row_count()))
+                
+            data_pos = curr_pc.data[int(rect_rel_w_pos * len(curr_pc.data))]
+            data_pos *= s_y
+            data_pos += t_y
+                        
+            self.marker.set_data(np.array([[rect_rel_w_pos, data_pos]]))
+            
 
     def on_mouse_press(self, event):
         self.input_recieved.emit(event)
