@@ -351,9 +351,18 @@ class SignalDisplay(QWidget):
 
     def on_mouse_move(self, event):
 
-        # ??? Instead of modes use event.modifiers???
-
+        # Get position relative to zoom
         pos = event.pos[:2]
+        w = self.signal_view.width
+        h = self.signal_view.height
+        rel_w_pos = pos[0] / w
+        # TODO: flip Vispy axis
+        rel_h_pos = (h-pos[1]) / h
+        rect = self.camera.rect
+        rect_rel_w_pos = rect.left + (rel_w_pos * rect.width)
+        rect_rel_h_pos = rect.bottom + (rel_h_pos * rect.height)
+        
+        # ??? Instead of modes use event.modifiers???
 
         if self.highlight_mode:
             # Determine the signal plot
@@ -363,14 +372,7 @@ class SignalDisplay(QWidget):
             cols = self.visible_channels.get_col_count()
 
             # Determine the signal plot
-            w = self.signal_view.width
-            h = self.signal_view.height
-            rel_w_pos = pos[0] / w
-            # TODO: flip Vispy axis
-            rel_h_pos = (h-pos[1]) / h
-            rect = self.camera.rect
-            rect_rel_w_pos = rect.left + (rel_w_pos * rect.width)
-            rect_rel_h_pos = rect.bottom + (rel_h_pos * rect.height)
+
             sig_w_pos = rect_rel_w_pos * cols
             sig_h_pos = rect_rel_h_pos * rows
 
@@ -386,12 +388,8 @@ class SignalDisplay(QWidget):
                     self.highlight_signal(pc)
 
         if self.measurement_mode:
-            w = self.signal_view.width
-            h = self.signal_view.height
-            rel_w_pos = pos[0] / w
-            # TODO: flip Vispy axis
-            rel_h_pos = (h-pos[1]) / h
-            self.crosshair.set_data([rel_w_pos, rel_h_pos])
+           
+            self.crosshair.set_data([rect_rel_w_pos, rect_rel_h_pos])
 
     def on_mouse_press(self, event):
         self.input_recieved.emit(event)
