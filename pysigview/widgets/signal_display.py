@@ -336,17 +336,15 @@ class SignalDisplay(QWidget):
 
         if event.type == 'key_press' and event.key == 'shift':
             self.highlight_mode = True
+            self.highlight_rec.visible = True
         elif event.type == 'key_press' and event.key == 'control':
             self.measurement_mode = True
             self.crosshair.visible = True
         elif event.type == 'key_release' and event.key == 'shift':
             self.highlight_mode = False
-            # ??? Uset visal.visible = False instead
-            # Erase the rectangle
-            self.highlight_rec.color = (0, 0, 0, 0.00001)
+            self.highlight_rec.visible = False
         elif event.type == 'key_release' and event.key == 'control':
             self.measurement_mode = False
-            # Erase cursor cross
             self.crosshair.visible = False
 
     def on_mouse_move(self, event):
