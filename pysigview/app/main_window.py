@@ -985,6 +985,8 @@ class MainWindow(QMainWindow):
 
         if self.closing():
             event.accept()
+        else:
+            event.ignore()
 
 
 # Main
