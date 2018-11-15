@@ -97,10 +97,12 @@ class Preferences(QWidget):
         # temporary prototype
         self.stack_layout_dict = {}
         self.options = {}
+        # create stack with all editable sections
+        self.stack_layout_dict = {section: QFormLayout() for section in self.sections}
 
         for section in self.sections:
-            tmp = QWidget()
-            tmp_layout = QFormLayout()
+            #tmp = QWidget()
+            #tmp_layout = QFormLayout()
             options = CONF.options(section=section)
             if 'enable' in options:
                 options.remove('enable')
@@ -152,13 +154,23 @@ class Preferences(QWidget):
                                                     validator=QIntValidator())
                     tmp_widget.editingFinished.connect(self._line_edit)
 
-                tmp_layout.addRow(str(option), tmp_widget)
+                if option.split('/')[0] in self.sections:
+                    section_tmp, optio_tmp = option.split('/')
+                    self.stack_layout_dict[section_tmp].addRow(str(optio_tmp), tmp_widget)
+                else:
+                    self.stack_layout_dict[section].addRow(str(option), tmp_widget)
 
                 # TODO future configuration of future selection from list
 
-            tmp.setLayout(tmp_layout)
-            self.stack_layout_dict[section] = tmp
+            #tmp.setLayout(tmp_layout)
+            #self.stack_layout_dict[section] = tmp_layout
+
+        # build whole stack
+        for section in self.sections:
+            tmp = QWidget()
+            tmp.setLayout(self.stack_layout_dict[section])
             self.options_editor.addWidget(tmp)
+
 
     # ----- functions saving signal function changes ----
     def _color_change(self, color):
