@@ -26,7 +26,7 @@ class Preferences(QWidget):
 
         # basic class atributes
         self.title = 'Preferences'
-        self.not_configurable = ['DEFAULTS', 'quick_layouts']
+        self.not_configurable = ['DEFAULTS', 'quick_layouts', 'main']
         self.sections = [section for section in CONF.sections()
                          if section not in self.not_configurable]
 
@@ -102,6 +102,9 @@ class Preferences(QWidget):
             tmp = QWidget()
             tmp_layout = QFormLayout()
             options = CONF.options(section=section)
+            if 'enable' in options:
+                options.remove('enable')
+
             self.options[section] = options
             for option in options:
                 option_val = CONF.get(section, option)
