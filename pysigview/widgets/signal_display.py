@@ -915,9 +915,6 @@ class SignalDisplay(QWidget):
 
         pc.line_color = np.array(c)
 
-        self.signal_label_dict[pc] = {'pos': [0, 0, 0],
-                                      'color': 'black'}
-
         pc.data_array_pos = [np.where(ci)[0][0]]
 
         # Scale factor
@@ -931,9 +928,6 @@ class SignalDisplay(QWidget):
             pc.uutc_ss = [pc.start_time, pc.start_time+init_tscale]
 
         return pc
-
-    def remove_plot_container(self, pc):
-        self.signal_label_dict.pop(pc)
 
     def side_flash(self, color=None):
 
@@ -1071,7 +1065,7 @@ class SignalDisplay(QWidget):
         name_list = []
         pos_list = []
         color_list = []
-        for pc, data_dict in self.signal_label_dict.items():
+        for pc in self.get_plot_containers():
 
             if self.signal_visual.visibility[pc._visual_array_idx]:
                 name_list.append(pc.name)
