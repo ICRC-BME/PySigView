@@ -148,26 +148,32 @@ class SignalDisplay(QWidget):
         # ----- Initial visuals operations-----
 
         # TODO - Add crosshair color to CONF
+        # Measurements
         self.crosshair = Crosshair(parent=self.signal_view.scene)
         self.marker = Markers(parent=self.signal_view.scene)
+
+        # Signal highlighting
         self.highlight_rec = Mesh(parent=self.signal_view.scene,
                                   color=np.array([0., 0., 0., 0.]),
                                   mode='triangle_fan')
+
+        # Grid
         self.grid = None
 
+        # Discontinuity
         self.disc_marker = LinearRegion(np.array([0, 0]),
                                         np.array([[0., 0., 0., 0.],
                                                  [0., 0., 0., 0.]]),
                                         parent=self.signal_view.scene)
 
-        self.label_visual = MulticolorText(anchor_x='left',
-                                           anchor_y='top',
-                                           parent=self.signal_view.scene)
         self.signal_label_dict = {}
-
+        # Main signal visal with labels
         w = CONF.get(self.CONF_SECTION, 'init_line_width')
         self.signal_visual = Multiline(width=w,
                                        parent=self.signal_view.scene)
+        self.label_visual = MulticolorText(anchor_x='left',
+                                           anchor_y='top',
+                                           parent=self.signal_view.scene)
 
         # TODO - one set of x and y axes for measurements
 
@@ -361,7 +367,7 @@ class SignalDisplay(QWidget):
         rect = self.camera.rect
         rect_rel_w_pos = rect.left + (rel_w_pos * rect.width)
         rect_rel_h_pos = rect.bottom + (rel_h_pos * rect.height)
-        
+
         # Determine the signal plot
 
         rows = self.visible_channels.get_row_count()
@@ -378,9 +384,9 @@ class SignalDisplay(QWidget):
                 and (pc.plot_position[1]
                      < sig_h_pos
                      < pc.plot_position[1]+1)):
-                
+
                 curr_pc = pc
-        
+
         # ??? Instead of modes use event.modifiers???
 
         if self.highlight_mode:
@@ -388,9 +394,9 @@ class SignalDisplay(QWidget):
             self.highlight_signal(curr_pc)
 
         if self.measurement_mode:
-           
+
             self.crosshair.set_data([rect_rel_w_pos, rect_rel_h_pos])
-            
+
             # Get the location of data point
             s_y = curr_pc.ufact*curr_pc.scale_factor
             t_y = ((-np.nanmean(curr_pc.data)
@@ -398,13 +404,12 @@ class SignalDisplay(QWidget):
                     * curr_pc.scale_factor)
                    + ((0.5+curr_pc.plot_position[1])
                    / self.visible_channels.get_row_count()))
-                
+
             data_pos = curr_pc.data[int(rect_rel_w_pos * len(curr_pc.data))]
             data_pos *= s_y
             data_pos += t_y
-                        
+
             self.marker.set_data(np.array([[rect_rel_w_pos, data_pos]]))
-            
 
     def on_mouse_press(self, event):
         self.input_recieved.emit(event)
