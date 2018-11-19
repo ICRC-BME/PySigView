@@ -602,3 +602,11 @@ class MemoryBuffer(BufferDataSource, QObject):
                                                       obj_uutc_ss)
 
         return data_out
+
+    def refresh_plugin(self):
+
+        self.chunk_size = int(CONF.get('data_management', 'chunk_size') * 1e6)
+        self.N_chunks_before = CONF.get('data_management', 'n_chunks_before')
+        self.N_chunks_after = CONF.get('data_management', 'n_chunks_after')
+        self.N_chunks = self.N_chunks_before + self.N_chunks_after + 1
+        self.use_disk = CONF.get('data_management', 'use_disk_buffer')

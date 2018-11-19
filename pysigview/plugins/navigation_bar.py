@@ -252,6 +252,25 @@ class BarWidget(QWidget):
 
         self.main.signal_display.move_to_time(midpoint)
 
+    def update_config(self):
+        "config change function"
+
+        # update colors from init
+        self.canvas.bgcolor = CONF.get(self.parent().CONF_SECTION,'bgcolor')
+        self.buffer_rgba = hex2rgba(CONF.get(self.parent().CONF_SECTION,
+                                             'buffer_bar_color'))
+        self.buffer_carray = np.array([self.buffer_rgba,
+                                       self.buffer_rgba])
+        self.view_rgba = hex2rgba(CONF.get(self.parent().CONF_SECTION,
+                                           'view_bar_color'))
+        self.view_carray = np.array([self.view_rgba,
+                                     self.view_rgba])
+
+        # update disc thresh
+        self.discont_thresh = CONF.get(self.parent().CONF_SECTION,
+                                       'discontinuity_limit')
+
+
 
 class ToolsWidget(QWidget):
 
@@ -533,5 +552,8 @@ class NavigationBar(BasePluginWidget):
 
     def refresh_plugin(self):
         """Refresh widget"""
-        if self._starting_up:
-            self._starting_up = False
+        # error no sel._starting_up atribute
+        # if self._starting_up:
+        #     self._starting_up = False
+
+        self.bar_widget.update_config()

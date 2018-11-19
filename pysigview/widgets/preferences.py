@@ -239,7 +239,6 @@ class Preferences(QWidget):
                 #     CONF.set(section, option, set(self.preferences_changed[section][option]))
                 # else:
                 #     CONF.set(section, option, self.preferences_changed[section][option])
-
         self.preferences_updated.emit()
 
     def load_preferences(self):

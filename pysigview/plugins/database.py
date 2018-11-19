@@ -187,5 +187,10 @@ class Database(BasePluginWidget):
 
     def refresh_plugin(self):
         """Refresh widget"""
-        if self._starting_up:
-            self._starting_up = False
+        # if self._starting_up:
+        #     self._starting_up = False
+        self.host_le.setText(str(CONF.get(self.CONF_SECTION, 'host')))
+        self.port_le.setText(str(CONF.get(self.CONF_SECTION, 'port')))
+        self.user_le.setText(str(CONF.get(self.CONF_SECTION, 'username')))
+
+
