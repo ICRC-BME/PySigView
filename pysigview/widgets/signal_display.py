@@ -26,7 +26,8 @@ from PyQt5.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QPushButton,
                              QDialog, QFileDialog, QComboBox)
 from PyQt5.QtCore import Qt, pyqtSignal, QSize, QThread
 from vispy import scene, color
-from vispy.scene import LinearRegion, Image, Mesh, GridLines, Markers
+from vispy.scene import (LinearRegion, Image, Mesh, GridLines, Markers, Axis,
+                         Line)
 from vispy.util.event import Event
 import numpy as np
 from scipy.io import savemat
@@ -151,6 +152,16 @@ class SignalDisplay(QWidget):
         # Measurements
         self.crosshair = Crosshair(parent=self.signal_view.scene)
         self.marker = Markers(parent=self.signal_view.scene)
+        self.xaxis = Axis(parent=self.signal_view.scene,
+                          tick_direction=(0., -1.),
+                          axis_width=1, tick_width=1,
+                          anchors=('center', 'top'))
+        self.yaxis = Axis(parent=self.signal_view.scene,
+                          tick_direction=(1., 0.),
+                          axis_width=1, tick_width=1,
+                          anchors=('left', 'center'))
+        self.measure_line = Line(parent=self.signal_view.scene,
+                                 width=3)
 
         # Signal highlighting
         self.highlight_rec = Mesh(parent=self.signal_view.scene,
@@ -224,6 +235,7 @@ class SignalDisplay(QWidget):
         self.plots_changed.connect(self.subsample)
         self.plots_changed.connect(self.rescale_grid)
         self.input_recieved.connect(self.set_highlight_mode)
+        self.input_recieved.connect(self.show_measure_line)
         self.canvas_resized.connect(self.update_subsample)
 
     # ----- Setup functions -----
@@ -347,6 +359,8 @@ class SignalDisplay(QWidget):
             self.measurement_mode = True
             self.crosshair.visible = True
             self.marker.visible = True
+            self.xaxis.visible = True
+            self.yaxis.visible = True
         elif event.type == 'key_release' and event.key == 'shift':
             self.highlight_mode = False
             self.highlight_rec.visible = False
@@ -354,6 +368,9 @@ class SignalDisplay(QWidget):
             self.measurement_mode = False
             self.crosshair.visible = False
             self.marker.visible = False
+            self.xaxis.visible = False
+            self.yaxis.visible = False
+            self.measure_line.visible = False
 
     def on_mouse_move(self, event):
 
@@ -397,19 +414,56 @@ class SignalDisplay(QWidget):
 
             self.crosshair.set_data([rect_rel_w_pos, rect_rel_h_pos])
 
+            n_channels = self.visible_channels.get_row_count()
+
             # Get the location of data point
             s_y = curr_pc.ufact*curr_pc.scale_factor
             t_y = ((-np.nanmean(curr_pc.data)
                     * curr_pc.ufact
                     * curr_pc.scale_factor)
-                   + ((0.5+curr_pc.plot_position[1])
-                   / self.visible_channels.get_row_count()))
+                   + ((0.5+curr_pc.plot_position[1]) / n_channels))
 
             data_pos = curr_pc.data[int(rect_rel_w_pos * len(curr_pc.data))]
             data_pos *= s_y
             data_pos += t_y
 
             self.marker.set_data(np.array([[rect_rel_w_pos, data_pos]]))
+
+            # TODO: determine margins
+            # TODO: xaxis should reflect zoom
+            # TODO: find out how to make ticks and labels more dense
+            # Axes
+            t_y = (curr_pc.plot_position[1] / n_channels)
+            y_margin = 0
+            self.xaxis.pos = [[0, t_y + y_margin],
+                              [1, t_y + y_margin]]
+            self.xaxis.domain = tuple((pc.uutc_ss - pc.uutc_ss[0]) / 1000000)
+
+            x_margin = 0
+            self.yaxis.pos = [[rect.left + x_margin, t_y],
+                              [rect.left + x_margin, t_y + (1/n_channels)]]
+            
+            lpos = self.measure_line.pos
+            if lpos is not None:
+                fixed = lpos[0]
+                right_angle = np.array([fixed[0], data_pos])
+                moving = np.array([rect_rel_w_pos, data_pos])
+                whole_line = np.vstack([fixed, right_angle, moving])
+                self.measure_line.set_data(pos=whole_line)
+
+    def show_measure_line(self, event):
+        
+        if event.type != 'mouse_press':
+            return
+        
+        modifiers = event.modifiers
+
+        if 'control' in modifiers:
+            
+            # Get position relative to zoom
+            self.measure_line.visible = True
+            pos = self.marker._data['a_position'][0][:2]
+            self.measure_line.set_data(pos=np.tile(pos,3).reshape([3,2]))
 
     def on_mouse_press(self, event):
         self.input_recieved.emit(event)
