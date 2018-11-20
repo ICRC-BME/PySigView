@@ -162,6 +162,9 @@ class SignalDisplay(QWidget):
                           anchors=('left', 'center'))
         self.measure_line = Line(parent=self.signal_view.scene,
                                  width=3)
+        self.describe_text = MulticolorText(anchor_x='right',
+                                            anchor_y='bottom',
+                                            parent=self.signal_view.scene)
 
         # Signal highlighting
         self.highlight_rec = Mesh(parent=self.signal_view.scene,
@@ -430,14 +433,14 @@ class SignalDisplay(QWidget):
             self.marker.set_data(np.array([[rect_rel_w_pos, data_pos]]))
 
             # TODO: determine margins
-            # TODO: xaxis should reflect zoom
             # TODO: find out how to make ticks and labels more dense
             # Axes
             t_y = (curr_pc.plot_position[1] / n_channels)
             y_margin = 0
-            self.xaxis.pos = [[0, t_y + y_margin],
-                              [1, t_y + y_margin]]
-            self.xaxis.domain = tuple((pc.uutc_ss - pc.uutc_ss[0]) / 1000000)
+            self.xaxis.pos = [[rect.left, t_y + y_margin],
+                              [rect.right, t_y + y_margin]]
+            rel_diff = (rect.right - rect.left) * np.diff(pc.uutc_ss)
+            self.xaxis.domain = tuple([0, rel_diff/1000000])
 
             x_margin = 0
             self.yaxis.pos = [[rect.left + x_margin, t_y],
