@@ -34,6 +34,7 @@ class SignalCamera(Magnify1DCamera):
     def __init__(self, signal_display):
         super(SignalCamera, self).__init__(mag=1)
 
+        # TODO: get rid of this and use the camera in trnasforms / measurements
         self.signal_display = signal_display
 
     def limit_zoom(self, rect):
