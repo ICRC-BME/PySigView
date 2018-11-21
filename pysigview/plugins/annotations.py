@@ -1248,6 +1248,9 @@ class Annotations(BasePluginWidget):
 
     def closing_plugin(self, cancelable=False):
         """Perform actions before parent main window is closed"""
+
+        # TODO: warning if there are unsaved annotations
+
         return True
 
     def refresh_plugin(self):
