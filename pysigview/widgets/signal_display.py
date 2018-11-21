@@ -162,7 +162,7 @@ class SignalDisplay(QWidget):
                           anchors=('left', 'center'))
         self.measure_line = Line(parent=self.signal_view.scene,
                                  width=3)
-        self.describe_text = MulticolorText(anchor_x='right',
+        self.describe_text = MulticolorText(anchor_x='left',
                                             anchor_y='bottom',
                                             parent=self.signal_view.scene)
 
@@ -374,6 +374,7 @@ class SignalDisplay(QWidget):
             self.xaxis.visible = False
             self.yaxis.visible = False
             self.measure_line.visible = False
+            self.describe_text.visible = False
 
     def on_mouse_move(self, event):
 
@@ -445,7 +446,7 @@ class SignalDisplay(QWidget):
             x_margin = 0
             self.yaxis.pos = [[rect.left + x_margin, t_y],
                               [rect.left + x_margin, t_y + (1/n_channels)]]
-            
+
             lpos = self.measure_line.pos
             if lpos is not None:
                 fixed = lpos[0]
@@ -454,19 +455,47 @@ class SignalDisplay(QWidget):
                 whole_line = np.vstack([fixed, right_angle, moving])
                 self.measure_line.set_data(pos=whole_line)
 
+                # Time
+                max_step = 1/curr_pc.fsamp
+                time_dist = moving[0]-fixed[0]
+                time_dist -= time_dist % max_step
+                oround = int(np.ceil((np.log10(curr_pc.fsamp))))
+                time_str = format(time_dist, '.'+str(oround)+'f')+' s'
+                time_str_pos = moving.copy()
+
+                # Amplitude
+                max_step = curr_pc.ufact
+                amp_dist = (moving[1] - fixed[1]) / s_y
+                amp_dist *= max_step
+                amp_dist -= amp_dist % amp_dist
+                amp_str = (format(amp_dist, '.5f') + ' ' + curr_pc.unit)
+                amp_str_pos = moving.copy()
+                amp_str_pos[0] = moving[0]
+                fsize = self.describe_text.font_size
+                amp_str_pos[1] += (((fsize+1)*rect.height)
+                                   / self.signal_view.height)
+
+                self.describe_text.text = [time_str, amp_str]
+                self.describe_text.pos = [time_str_pos, amp_str_pos]
+                self.describe_text.color = np.array([[1., 1., 1., 1.],
+                                                     [1., 1., 1., 1.]],
+                                                    dtype=np.float32)
+
     def show_measure_line(self, event):
-        
+
         if event.type != 'mouse_press':
             return
-        
+
         modifiers = event.modifiers
 
         if 'control' in modifiers:
-            
+
             # Get position relative to zoom
             self.measure_line.visible = True
             pos = self.marker._data['a_position'][0][:2]
-            self.measure_line.set_data(pos=np.tile(pos,3).reshape([3,2]))
+            self.measure_line.set_data(pos=np.tile(pos, 3).reshape([3, 2]))
+
+            self.describe_text.visible = True
 
     def on_mouse_press(self, event):
         self.input_recieved.emit(event)
@@ -477,6 +506,7 @@ class SignalDisplay(QWidget):
 
     def on_mouse_wheel(self, event):
 
+        # TODO: subsample for zoom
         # Get x_pos
         x_pos = event.pos[0]
 
