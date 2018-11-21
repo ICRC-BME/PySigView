@@ -481,6 +481,8 @@ class SignalDisplay(QWidget):
                                                      [1., 1., 1., 1.]],
                                                     dtype=np.float32)
 
+        self.input_recieved.emit(event)
+
     def show_measure_line(self, event):
 
         if event.type != 'mouse_press':

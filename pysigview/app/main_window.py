@@ -272,6 +272,11 @@ class MainWindow(QMainWindow):
         self.console = Console(self)
         self.console.register_plugin()
 
+        # Measurement
+        from pysigview.plugins.measurement import Measurement
+        self.measurement = Measurement(self)
+        self.measurement.register_plugin()
+
         # ----- Menu bar actions ----
         self.set_splash("Setting up main window menus...")
 
