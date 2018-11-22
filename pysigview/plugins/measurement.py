@@ -22,7 +22,7 @@ import numpy as np
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtWidgets import QVBoxLayout, QWidget
 from vispy import scene
-from vispy.scene import Line
+from vispy.scene import Line, AxisWidget, Spectrogram
 from vispy.scene.cameras import PanZoomCamera
 from vispy.visuals.transforms import STTransform
 
@@ -45,6 +45,7 @@ class SignalWidget(QWidget):
         self.curr_pc = None
         self.sig_start = None
         self.sig_stop = None
+        self.spect_type = 'spectrogram' # spectrum, spectrogram
 
         # Setup camera
         self.signal_camera = PanZoomCamera()
@@ -54,16 +55,64 @@ class SignalWidget(QWidget):
                                         parent=self)
 
         # TODO: change this to grid with axes and signal transform
-        self.view_grid = self.canvas.central_widget.add_grid()
-        self.signal_view = self.view_grid.add_view(camera=self.signal_camera)
-        self.fft_view = self.view_grid.add_view(row=1, col=0,
-                                                camera=self.spectrum_camera)
+        self.view_grid = self.canvas.central_widget.add_grid(margin=10)
+        self.view_grid.spacing = 10
+
+        # Signal
+        self.signal_view = self.view_grid.add_view(row=0, col=1,
+                                                   camera=self.signal_camera)
+        self.signal_yaxis = AxisWidget(orientation='left',
+                                       axis_label='Amplitude',
+                                       axis_font_size=12,
+                                       axis_label_margin=50,
+                                       tick_label_margin=5)
+        self.signal_yaxis.width_max = 80
+        self.view_grid.add_widget(self.signal_yaxis, row=0, col=0)
+
+        self.signal_xaxis = scene.AxisWidget(orientation='bottom',
+                                             axis_label='Time [s]',
+                                             axis_font_size=12,
+                                             axis_label_margin=50,
+                                             tick_label_margin=5)
+
+        self.signal_xaxis.height_max = 80
+        self.view_grid.add_widget(self.signal_xaxis, row=1, col=1)
+
+        self.signal_yaxis.link_view(self.signal_view)
+        self.signal_xaxis.link_view(self.signal_view)
+
+        # Spectrum
+        self.spectrum_view = self.view_grid.add_view(row=2, col=1,
+                                                     camera=self.
+                                                     spectrum_camera)
+
+        self.spectrum_yaxis = AxisWidget(orientation='left',
+                                         axis_label='Amplitude',
+                                         axis_font_size=12,
+                                         axis_label_margin=50,
+                                         tick_label_margin=5)
+        self.spectrum_yaxis.width_max = 80
+        self.view_grid.add_widget(self.spectrum_yaxis, row=2, col=0)
+
+        self.spectrum_xaxis = scene.AxisWidget(orientation='bottom',
+                                               axis_label='Frequency [Hz]',
+                                               axis_font_size=12,
+                                               axis_label_margin=50,
+                                               tick_label_margin=5)
+
+        self.spectrum_xaxis.height_max = 80
+        self.view_grid.add_widget(self.spectrum_xaxis, row=3, col=1)
+
+        self.spectrum_yaxis.link_view(self.spectrum_view)
+        self.spectrum_xaxis.link_view(self.spectrum_view)
 
 #        self.transform_view = self.canvas.central_widget.add_view(
 #                    camera=self.camera)
 
         self.signal_line = Line(parent=self.signal_view.scene, width=1)
-        self.spectrum_line = Line(parent=self.fft_view.scene, width=1)
+        self.spectrum_line = Line(parent=self.spectrum_view.scene, width=1)
+#        self.spectrogram = Spectrogram(parent=self.spectrum_view.scene)
+        self.spectrogram = None
 
         # ----- Set layout -----
         # Widget layout
@@ -148,14 +197,14 @@ class SignalWidget(QWidget):
 
         # Signal line
 
-        s_x = 1/len(data)
+        s_x = 1/self.curr_pc.fsamp
         s_y = 1/(np.max(data)-np.min(data))
         s_z = 0
-        scale = [s_x, s_y, s_z]
+        scale = [s_x, 1, 1]
 
         # Translate
         t_x = 0
-        t_y = -(((np.max(data) + np.min(data)) / 2) * s_y) + 0.5
+        t_y = -np.min(data)
         t_z = 0
         translate = [t_x, t_y, t_z]
 
@@ -166,31 +215,74 @@ class SignalWidget(QWidget):
         self.signal_line.set_data(pos=pos, color=self.curr_pc.line_color)
         self.signal_line.transform = transform
 
-        # FFT line
+        r = self.signal_camera.rect
+        r.left = 0
+        r.right = len(data) * s_x
+        r.bottom = 0
+        r.top = np.max(data)-np.min(data)
+        self.signal_camera.rect = r
 
-        s = np.abs(np.fft.fft(data))[:int(len(data)/2)]
-        s[0] = 0
-        time_step = 1 / self.curr_pc.fsamp
-        freqs = np.fft.fftfreq(data.size, time_step)
-        idx = np.argsort(freqs)
+        if self.spect_type == 'spectrum':
+            # Spectrum line
 
-        s_x = 1/len(s)
-        s_y = 1/(np.max(s)-np.min(s))
-        s_z = 0
-        scale = [s_x, s_y, s_z]
+            s = np.abs(np.fft.fft(data))[:int(len(data)/2)]
+            s[0] = 0
 
-        # Translate
-        t_x = 0
-        t_y = 0
-        t_z = 0
-        translate = [t_x, t_y, t_z]
+            s_x = (self.curr_pc.fsamp / 2) / len(s)
+            s_y = 1
+            s_z = 0
+            scale = [s_x, s_y, s_z]
 
-        transform = STTransform(scale, translate)
+            transform = STTransform(scale)
 
-        pos = np.c_[np.arange(len(s)), s]
+            pos = np.c_[np.arange(len(s)), s]
 
-        self.spectrum_line.set_data(pos=pos, color=self.curr_pc.line_color)
-        self.spectrum_line.transform = transform
+            self.spectrum_line.set_data(pos=pos, color=self.curr_pc.line_color)
+            self.spectrum_line.transform = transform
+
+            r = self.spectrum_camera.rect
+            r.left = 0
+            r.right = self.curr_pc.fsamp / 2
+            r.bottom = 0
+            r.top = np.max(s)
+            self.spectrum_camera.rect = r
+
+        elif self.spect_type == 'spectrogram':
+
+            n_fft = 256
+            if len(data) < n_fft:
+                return
+            step = 1
+            color_scale = 'log'
+            cmap = 'viridis'
+            # TODO: this is only temporary - create my onw spectrogram
+            if self.spectrogram is not None:
+                self.spectrogram.visible = False
+            self.spectrogram = Spectrogram(data,
+                                           n_fft,
+                                           step,
+                                           self.curr_pc.fsamp,
+                                           'hann',
+                                           color_scale,
+                                           cmap,
+                                           parent=self.spectrum_view.scene)
+            freqs = self.spectrogram.freqs
+            n_windows = (len(data) - n_fft) // step + 1
+            s_x = 1
+            s_y = (self.curr_pc.fsamp / 2) / len(freqs)
+            s_z = 0
+            scale = [s_x, s_y, s_z]
+
+            transform = STTransform(scale)
+
+            self.spectrogram.transform = transform
+
+            r = self.spectrum_camera.rect
+            r.left = 0
+            r.right = n_windows
+            r.bottom = 0
+            r.top = (self.curr_pc.fsamp / 2)
+            self.spectrum_camera.rect = r
 
 
 class ToolsWidget(QWidget):
