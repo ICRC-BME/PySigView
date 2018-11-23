@@ -20,16 +20,17 @@ United States
 # Third party imports
 import numpy as np
 from PyQt5.QtCore import pyqtSignal, Qt
-from PyQt5.QtWidgets import (QVBoxLayout, QWidget, QTabWidget, QLineEdit,
-                             QFormLayout)
+from PyQt5.QtWidgets import (QVBoxLayout, QWidget, QComboBox, QLineEdit,
+                             QFormLayout, QHBoxLayout)
 from vispy import scene
-from vispy.scene import Line, AxisWidget, Spectrogram
+from vispy.scene import Line, AxisWidget
 from vispy.scene.cameras import PanZoomCamera
 from vispy.visuals.transforms import STTransform
 
 # Local imports
 from pysigview.plugins.base import BasePluginWidget
 from pysigview.cameras.signal_camera import SignalCamera
+from pysigview.visuals.spectrogram_visual import Spectrogram
 
 
 class SignalWidget(QWidget):
@@ -59,7 +60,6 @@ class SignalWidget(QWidget):
         self.canvas = scene.SceneCanvas(show=True, keys='interactive',
                                         parent=self)
 
-        # TODO: change this to grid with axes and signal transform
         self.view_grid = self.canvas.central_widget.add_grid(margin=10)
 
         # Signal
@@ -108,8 +108,7 @@ class SignalWidget(QWidget):
 
         self.signal_line = Line(parent=self.signal_view.scene, width=1)
         self.spectrum_line = Line(parent=self.spectrum_view.scene, width=1)
-#        self.spectrogram = Spectrogram(parent=self.spectrum_view.scene)
-        self.spectrogram = None
+        self.spectrogram = Spectrogram(parent=self.spectrum_view.scene)
 
         # ----- Set layout -----
         # Widget layout
@@ -127,8 +126,7 @@ class SignalWidget(QWidget):
             self.spectrum_line.visible = True
             self.spectrogram.visible = False
         elif stype == 'spectrogram':
-            if self.spectrogram:  # TODO: only temporary
-                self.spectrogram.visible = True
+            self.spectrogram.visible = True
             self.spectrum_line.visible = False
 
         self.update_signals()
@@ -176,8 +174,9 @@ class SignalWidget(QWidget):
                     self.curr_pc = pc
 
             self.sig_start = int(rect_rel_w_pos * len(self.curr_pc.data))
+            self.spectrogram.fs = self.curr_pc.fsamp
 
-        if self.sig_start is not None:
+        if self.curr_pc is not None:
             if event.type == 'mouse_move' and self.measurement_mode is True:
                 # Get position relative to zoom
                 pos = event.pos[:2]
@@ -194,6 +193,9 @@ class SignalWidget(QWidget):
                 self.update_signals()
 
     def update_signals(self):
+
+        if self.sig_start is None or self.sig_stop is None:
+            return
 
         if self.sig_start < self.sig_stop:
             data = self.curr_pc.data[self.sig_start:self.sig_stop]
@@ -250,8 +252,6 @@ class SignalWidget(QWidget):
             else:
                 high_lim_idx = len(freqs)
 
-            freqs = freqs[low_lim_idx:high_lim_idx]
-
             s_x = (self.curr_pc.fsamp / 2) / len(s)
             s_y = 1
             s_z = 0
@@ -264,6 +264,7 @@ class SignalWidget(QWidget):
             self.spectrum_line.set_data(pos=pos, color=self.curr_pc.line_color)
             self.spectrum_line.transform = transform
 
+            freqs = freqs[low_lim_idx:high_lim_idx]
             pos = (freqs[0], 0)
             size = (freqs[-1] - freqs[0],
                     np.max(s[low_lim_idx:high_lim_idx]))
@@ -272,26 +273,28 @@ class SignalWidget(QWidget):
 
         elif self.spect_type == 'spectrogram':
 
-            n_fft = 256
-            if len(data) < n_fft:
-                return
-            step = 1
-            color_scale = 'log'
-            cmap = 'viridis'
-            # TODO: this is only temporary - create my onw spectrogram
             # TODO change axis lables
-            if self.spectrogram is not None:
-                self.spectrogram.visible = False
-            self.spectrogram = Spectrogram(data,
-                                           n_fft,
-                                           step,
-                                           self.curr_pc.fsamp,
-                                           'hann',
-                                           color_scale,
-                                           cmap,
-                                           parent=self.spectrum_view.scene)
+
+            self.spectrogram.x = data
+
             freqs = self.spectrogram.freqs
-            n_windows = (len(data) - n_fft) // step + 1
+
+            if self.low_lim is not None:
+                res = np.where(freqs >= self.low_lim)[0]
+                if len(res) > 0:
+                    low_lim_idx = res[0]
+            else:
+                low_lim_idx = 0
+
+            if self.high_lim is not None:
+                res = np.where(freqs <= self.high_lim)[0]
+                if len(res) > 0:
+                    high_lim_idx = res[-1]
+            else:
+                high_lim_idx = len(freqs)
+
+            n_windows = ((len(data) - self.spectrogram.n_fft)
+                         // self.spectrogram.step + 1)
             s_x = (len(data) / n_windows)/self.curr_pc.fsamp
             s_y = (self.curr_pc.fsamp / 2) / len(freqs)
             s_z = 0
@@ -301,59 +304,96 @@ class SignalWidget(QWidget):
 
             self.spectrogram.transform = transform
 
-            self.spectrum_camera.rect = (0, 0), (n_windows * s_x,
-                                                 self.curr_pc.fsamp / 2)
+            if len(freqs) == 0:
+                return
+
+            freqs = freqs[low_lim_idx:high_lim_idx-1]
+            pos = (0, freqs[0])
+            size = (n_windows * s_x, freqs[-1] - freqs[0])
+
+            self.spectrum_camera.rect = pos, size
 
 
-class ToolsWidget(QTabWidget):
+class SpectrumTools(QWidget):
+
+    def __init__(self, parent):
+        super(SpectrumTools, self).__init__(parent)
+
+
+class SpectrogramTools(QWidget):
+
+    def __init__(self, parent):
+        super(SpectrogramTools, self).__init__(parent)
+
+        self.spectrocgram = self.parent().plugin.signal_widget.spectrogram
+
+        layout = QFormLayout()
+
+        self.n_fft_le = QLineEdit()
+        layout.addRow('NFFT', self.n_fft_le)
+        self.n_fft_le.editingFinished.connect(self.set_n_fft)
+
+        self.setLayout(layout)
+
+    def set_n_fft(self):
+        self.spectrocgram.n_fft = int(self.n_fft_le.text())
+        self.parent().plugin.signal_widget.update_signals()
+
+
+class ToolsWidget(QWidget):
 
     def __init__(self, parent):
         super(ToolsWidget, self).__init__(parent)
 
+        self.plugin = self.parent()
+
         # TODO - input masks for edit fields
 
-        self.spectrum_tab = QWidget()
+        main_layout = QHBoxLayout()
 
-        layout = QFormLayout()
+        form_layout = QFormLayout()
+
+        self.cb = QComboBox()
+        self.cb.addItems(['Spectrum', 'Spectrogram'])
+        self.cb.currentIndexChanged.connect(self.switch_spect_type)
+        form_layout.addRow("Transform", self.cb)
+
         self.low_lim_le = QLineEdit()
         self.high_lim_le = QLineEdit()
-        layout.addRow("Low limit", self.low_lim_le)
-        layout.addRow("High limit", self.high_lim_le)
+        form_layout.addRow("Low limit", self.low_lim_le)
+        form_layout.addRow("High limit", self.high_lim_le)
 
         self.low_lim_le.editingFinished.connect(self.set_low_lim)
         self.high_lim_le.editingFinished.connect(self.set_high_lim)
 
-        self.spectrum_tab.setLayout(layout)
+        self.spectrum_tools = SpectrumTools(self)
+        self.spectrogram_tools = SpectrogramTools(self)
+        self.specific_tools = [self.spectrum_tools, self.spectrogram_tools]
 
-        self.spectrogram_tab = QWidget()
+        main_layout.addLayout(form_layout)
+        main_layout.addWidget(self.specific_tools[0])
 
-        self.addTab(self.spectrum_tab, 'Spectrum')
-        self.addTab(self.spectrogram_tab, 'Spectrogram')
+        self.setLayout(main_layout)
 
-        self.currentChanged.connect(self.switch_spect_type)
-
-    def switch_spect_type(self):
-
-        if self.tabText(self.currentIndex()) == 'Spectrum':
-            self.parent().signal_widget.set_spect_type('spectrum')
-        elif self.tabText(self.currentIndex()) == 'Spectrogram':
-            self.parent().signal_widget.set_spect_type('spectrogram')
+    def switch_spect_type(self, idx):
+        self.plugin.signal_widget.set_spect_type(self.cb.itemText(idx).lower())
+        self.layout().insertWidget(1, self.specific_tools[idx])
 
     def set_low_lim(self):
         if self.low_lim_le.text() != '':
-            self.parent().signal_widget.low_lim = int(self.low_lim_le.text())
-            self.parent().signal_widget.update_signals()
+            self.plugin.signal_widget.low_lim = int(self.low_lim_le.text())
+            self.plugin.signal_widget.update_signals()
         else:
-            self.parent().signal_widget.low_lim = 0
-            self.parent().signal_widget.update_signals()
+            self.plugin.signal_widget.low_lim = None
+            self.plugin.signal_widget.update_signals()
 
     def set_high_lim(self):
         if self.high_lim_le.text() != '':
-            self.parent().signal_widget.high_lim = int(self.high_lim_le.text())
-            self.parent().signal_widget.update_signals()
+            self.plugin.signal_widget.high_lim = int(self.high_lim_le.text())
+            self.plugin.signal_widget.update_signals()
         else:
-            self.parent().signal_widget.high_lim = 0
-            self.parent().signal_widget.update_signals()
+            self.plugin.signal_widget.high_lim = None
+            self.plugin.signal_widget.update_signals()
 
 
 class Measurement(BasePluginWidget):
@@ -384,10 +424,10 @@ class Measurement(BasePluginWidget):
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self.tools_widget = ToolsWidget(self)
-        layout.addWidget(self.tools_widget)
-
         self.signal_widget = SignalWidget(self)
+        self.tools_widget = ToolsWidget(self)
+        
+        layout.addWidget(self.tools_widget)
         layout.addWidget(self.signal_widget)
 
         self.setLayout(layout)
