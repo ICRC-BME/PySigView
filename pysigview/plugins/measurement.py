@@ -20,6 +20,7 @@ United States
 # Third party imports
 import numpy as np
 from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtGui import QIntValidator, QDoubleValidator
 from PyQt5.QtWidgets import (QVBoxLayout, QWidget, QComboBox, QLineEdit,
                              QCheckBox, QFormLayout, QHBoxLayout, QSlider)
 from vispy import scene, color
@@ -39,7 +40,8 @@ class SignalWidget(QWidget):
         super(SignalWidget, self).__init__(parent)
 
         # Useful trnascripts
-        self.sd = self.parent().sd
+        self.plugin = self.parent()
+        self.sd = self.plugin.sd
 
         # Variables
         self.fixed_point = None
@@ -128,9 +130,13 @@ class SignalWidget(QWidget):
         if stype == 'spectrum':
             self.spectrum_line.visible = True
             self.spectrogram.visible = False
+            self.spectrum_xaxis.label = 'Amplitude'
+            self.spectrum_yaxis.label = 'Frequency [Hz]'
         elif stype == 'spectrogram':
             self.spectrogram.visible = True
             self.spectrum_line.visible = False
+            self.spectrum_xaxis.label = 'Frequency [Hz]'
+            self.spectrum_yaxis.label = 'Time [s]'
 
         self.update_signals()
 
@@ -180,6 +186,19 @@ class SignalWidget(QWidget):
             self.spectrogram.fs = self.curr_pc.fsamp
 
         if self.curr_pc is not None:
+
+            # TODO this should be triggered if sampling frequency changes
+            if self.low_lim is None:
+                self.plugin.tools_widget.general_tools \
+                    .low_lim_le.setText('0')
+                self.plugin.tools_widget.general_tools \
+                    .low_lim_le_validator.setRange(0, self.curr_pc.fsamp/2, 1)
+            if self.high_lim is None:
+                self.plugin.tools_widget.general_tools \
+                    .high_lim_le.setText(str(self.curr_pc.fsamp/2))
+                self.plugin.tools_widget.general_tools \
+                    .high_lim_le_validator.setRange(0, self.curr_pc.fsamp/2, 1)
+
             if event.type == 'mouse_move' and self.measurement_mode is True:
                 # Get position relative to zoom
                 pos = event.pos[:2]
@@ -285,8 +304,6 @@ class SignalWidget(QWidget):
 
         elif self.spect_type == 'spectrogram':
 
-            # TODO change axis lables
-
             self.spectrogram.x = data
 
             freqs = self.spectrogram.freqs
@@ -342,7 +359,13 @@ class GeneralTools(QWidget):
         layout.addRow("Transform", self.cb)
 
         self.low_lim_le = QLineEdit()
+        self.low_lim_le_validator = QDoubleValidator()
+        self.low_lim_le.setValidator(self.low_lim_le_validator)
+
         self.high_lim_le = QLineEdit()
+        self.high_lim_le_validator = QDoubleValidator()
+        self.high_lim_le.setValidator(self.high_lim_le_validator)
+
         layout.addRow("Low limit", self.low_lim_le)
         layout.addRow("High limit", self.high_lim_le)
 
@@ -359,6 +382,7 @@ class GeneralTools(QWidget):
         self.parent().layout().insertWidget(1,
                                             self.parent().specific_tools[idx])
         self.parent().curr_tools_widget = self.parent().specific_tools[idx]
+        # TODO change axis lables
 
     def set_low_lim(self):
         if self.low_lim_le.text() != '':
@@ -411,10 +435,14 @@ class SpectrogramTools(QWidget):
         layout = QFormLayout()
 
         self.n_fft_le = QLineEdit(str(self.spectrogram.n_fft))
+        self.n_fft_le_validator = QIntValidator(8, 1024)
+        self.n_fft_le.setValidator(self.n_fft_le_validator)
         layout.addRow('NFFT', self.n_fft_le)
         self.n_fft_le.editingFinished.connect(self.set_n_fft)
 
         self.step_le = QLineEdit(str(self.spectrogram.step))
+        self.step_le_validator = QIntValidator(1, 128)
+        self.step_le.setValidator(self.step_le_validator)
         layout.addRow('Step', self.step_le)
         self.step_le.editingFinished.connect(self.set_step)
 
@@ -453,6 +481,8 @@ class SpectrogramTools(QWidget):
         self.clim_low_s.valueChanged.connect(self.set_clim_low_s)
 
         self.clim_low_le = QLineEdit('0')
+        self.clim_low_le_validator = QIntValidator(1, 100)
+        self.clim_low_le.setValidator(self.clim_low_le_validator)
         self.clim_low_le.editingFinished.connect(self.set_clim)
         self.clim_low_le.setMaximumWidth(40)
 
@@ -471,6 +501,8 @@ class SpectrogramTools(QWidget):
         self.clim_high_s.valueChanged.connect(self.set_clim_high_s)
 
         self.clim_high_le = QLineEdit('100')
+        self.clim_high_le_validator = QIntValidator(1, 100)
+        self.clim_high_le.setValidator(self.clim_high_le_validator)
         self.clim_high_le.editingFinished.connect(self.set_clim)
         self.clim_high_le.setMaximumWidth(40)
 
@@ -483,6 +515,7 @@ class SpectrogramTools(QWidget):
 
     def set_n_fft(self):
         self.spectrogram.n_fft = int(self.n_fft_le.text())
+        self.step_le_validator.setTop(self.spectrogram.n_fft - 1)
         self.parent().plugin.signal_widget.update_signals()
 
     def set_step(self):
@@ -505,8 +538,14 @@ class SpectrogramTools(QWidget):
         low = int(val)
         high = int(self.clim_high_le.text())
 
+        # Adjust validators
+        self.clim_high_le_validator.setBottom(low)
+
         # Adjust text
         self.clim_low_le.setText(str(low))
+
+        if self.spectrogram.data is None:
+            return
 
         d_min = np.min(self.spectrogram.data)
         d_max = np.max(self.spectrogram.data)
@@ -519,8 +558,14 @@ class SpectrogramTools(QWidget):
         low = int(self.clim_low_le.text())
         high = int(val)
 
+        # Adjust validators
+        self.clim_low_le_validator.setTop(high)
+
         # Adjust text
         self.clim_high_le.setText(str(high))
+
+        if self.spectrogram.data is None:
+            return
 
         d_min = np.min(self.spectrogram.data)
         d_max = np.max(self.spectrogram.data)
@@ -533,9 +578,16 @@ class SpectrogramTools(QWidget):
         low = int(self.clim_low_le.text())
         high = int(self.clim_high_le.text())
 
+        # Adjust validators
+        self.clim_low_le_validator.setTop(high)
+        self.clim_high_le_validator.setBottom(low)
+
         # Adjust the sliders
         self.clim_low_s.setValue(low)
         self.clim_high_s.setValue(high)
+
+        if self.spectrogram.data is None:
+            return
 
         d_min = np.min(self.spectrogram.data)
         d_max = np.max(self.spectrogram.data)
@@ -551,8 +603,6 @@ class ToolsWidget(QWidget):
         super(ToolsWidget, self).__init__(parent)
 
         self.plugin = self.parent()
-
-        # TODO - input masks for edit fields
 
         main_layout = QHBoxLayout()
 
