@@ -166,17 +166,8 @@ class SignalWidget(QWidget):
                     .high_lim_le_validator.setRange(0, self.curr_pc.fsamp/2, 1)
 
             if event.type == 'mouse_move' and self.measurement_mode is True:
-                # Get position relative to zoom
-                pos = event.pos[:2]
-                w = self.sd.signal_view.width
-                h = self.sd.signal_view.height
-                rel_w_pos = pos[0] / w
-                # TODO: flip Vispy axis
-                rel_h_pos = (h-pos[1]) / h
-                rect = self.sd.camera.rect
-                rect_rel_w_pos = rect.left + (rel_w_pos * rect.width)
-
-                self.sig_stop = int(rect_rel_w_pos * len(self.curr_pc.data))
+                self.sig_stop = int(self.sd.rect_rel_w_pos
+                                    * len(self.curr_pc.data))
 
                 self.update_signals()
 
