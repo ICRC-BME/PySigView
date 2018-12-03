@@ -144,39 +144,9 @@ class SignalWidget(QWidget):
         elif event.type == 'key_release' and event.key == 'control':
             self.measurement_mode = False
 
-
-        # TODO: this code is duplicated here, annotations, signal_view widget - carry it out only once!!!
-
         if event.type == 'mouse_press' and self.measurement_mode is True:
-            # Get position relative to zoom
-            pos = event.pos[:2]
-            w = self.sd.signal_view.width
-            h = self.sd.signal_view.height
-            rel_w_pos = pos[0] / w
-            # TODO: flip Vispy axis
-            rel_h_pos = (h-pos[1]) / h
-            rect = self.sd.camera.rect
-            rect_rel_w_pos = rect.left + (rel_w_pos * rect.width)
-            rect_rel_h_pos = rect.bottom + (rel_h_pos * rect.height)
-
-            # Determine the signal plot
-
-            rows = self.sd.visible_channels.get_row_count()
-            cols = self.sd.visible_channels.get_col_count()
-
-            sig_w_pos = rect_rel_w_pos * cols
-            sig_h_pos = rect_rel_h_pos * rows
-
-            for pc in self.sd.get_plot_containers():
-
-                if ((pc.plot_position[0]
-                     < sig_w_pos
-                     < pc.plot_position[0]+1)
-                    and (pc.plot_position[1]
-                         < sig_h_pos
-                         < pc.plot_position[1]+1)):
-
-                    self.curr_pc = pc
+            self.curr_pc = self.sd.curr_pc
+            rect_rel_w_pos = self.sd.rect_rel_w_pos
 
             self.sig_start = int(rect_rel_w_pos * len(self.curr_pc.data))
             self.spectrogram.fs = self.curr_pc.fsamp

@@ -781,6 +781,7 @@ class Annotations(BasePluginWidget):
         # Presets for the main winow
         self.title = 'Annotations'
         self.main = parent
+        self.sd = self.main.signal_display
 
         # TODO toolbar - adopt from Spyder
         # ----- Toolbar -----
@@ -939,42 +940,13 @@ class Annotations(BasePluginWidget):
         elif event.button == 2:
             self.user_annotation_type = 'recording'
 
-        sd = self.main.signal_display
-
-        # Get cursor positions
-        pos = event.pos[:2]
-
-        # Determine the signal plot
-        w = sd.signal_view.width
-        h = sd.signal_view.height
-
-        rel_w_pos = pos[0] / w
-        rel_h_pos = pos[1] / h
-
-        # Correct for zoom
-        rect = sd.camera.rect
-        rect_rel_w_pos = rect.left + (rel_w_pos * rect.width)
-        # TODO: flip Vispy axis
-        rect_rel_h_pos = 1 - (rect.top - (rel_h_pos * rect.height))
-
-        sig_w_pos = rect_rel_w_pos  # TODO - will be different when use columns
-        sig_h_pos = (len(sd.get_plot_containers())
-                     - (rect_rel_h_pos * len(sd.get_plot_containers())))
-
-        for pc in sd.get_plot_containers():
-
-            if ((pc.plot_position[0]
-                < sig_w_pos
-                < pc.plot_position[0]+1)
-                and (pc.plot_position[1]
-                     < sig_h_pos
-                     < pc.plot_position[1]+1)):
-                self.user_pc = pc
-                break
+        self.user_pc = self.sd.curr_pc
+        rect_rel_w_pos = self.sd.rect_rel_w_pos
 
         # Determine the time
-        dm_pos = np.argmax(sd.data_map['channels'] == pc.orig_channel)
-        uutc_ss = sd.data_map['uutc_ss'][dm_pos]
+        dm_pos = np.argmax(self.sd.data_map['channels']
+                           == self.user_pc.orig_channel)
+        uutc_ss = self.sd.data_map['uutc_ss'][dm_pos]
         uutc = int(uutc_ss[0] + (np.diff(uutc_ss) * rect_rel_w_pos))
 
         if np.isnan(self.user_annotation[0]):

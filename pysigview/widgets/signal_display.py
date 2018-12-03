@@ -82,6 +82,9 @@ class SignalDisplay(QWidget):
         self.plot_containers = []
         # TODO: Selected signal plot used for data shifting, colors, etc
         self.master_plot = None
+        self.curr_pc = None
+        self.rect_rel_w_pos = None
+        self.rect_rel_h_pos = None
         self.resize_flag = False
         self.highlight_mode = False
         self.measurement_mode = False
@@ -386,16 +389,16 @@ class SignalDisplay(QWidget):
         # TODO: flip Vispy axis
         rel_h_pos = (h-pos[1]) / h
         rect = self.camera.rect
-        rect_rel_w_pos = rect.left + (rel_w_pos * rect.width)
-        rect_rel_h_pos = rect.bottom + (rel_h_pos * rect.height)
+        self.rect_rel_w_pos = rect.left + (rel_w_pos * rect.width)
+        self.rect_rel_h_pos = rect.bottom + (rel_h_pos * rect.height)
 
         # Determine the signal plot
 
         rows = self.visible_channels.get_row_count()
         cols = self.visible_channels.get_col_count()
 
-        sig_w_pos = rect_rel_w_pos * cols
-        sig_h_pos = rect_rel_h_pos * rows
+        sig_w_pos = self.rect_rel_w_pos * cols
+        sig_h_pos = self.rect_rel_h_pos * rows
 
         for pc in self.get_plot_containers():
 
@@ -406,37 +409,40 @@ class SignalDisplay(QWidget):
                      < sig_h_pos
                      < pc.plot_position[1]+1)):
 
-                curr_pc = pc
+                self.curr_pc = pc
+                break
 
         # ??? Instead of modes use event.modifiers???
 
         if self.highlight_mode:
 
-            self.highlight_signal(curr_pc)
+            self.highlight_signal(self.curr_pc)
 
         if self.measurement_mode:
 
-            self.crosshair.set_data([rect_rel_w_pos, rect_rel_h_pos])
+            self.crosshair.set_data([self.rect_rel_w_pos,
+                                     self.rect_rel_h_pos])
 
             n_channels = self.visible_channels.get_row_count()
 
             # Get the location of data point
-            s_y = curr_pc.ufact*curr_pc.scale_factor
-            t_y = ((-np.nanmean(curr_pc.data)
-                    * curr_pc.ufact
-                    * curr_pc.scale_factor)
-                   + ((0.5+curr_pc.plot_position[1]) / n_channels))
+            s_y = self.curr_pc.ufact*self.curr_pc.scale_factor
+            t_y = ((-np.nanmean(self.curr_pc.data)
+                    * self.curr_pc.ufact
+                    * self.curr_pc.scale_factor)
+                   + ((0.5+self.curr_pc.plot_position[1]) / n_channels))
 
-            data_pos = curr_pc.data[int(rect_rel_w_pos * len(curr_pc.data))]
+            data_pos = self.curr_pc.data[int(self.rect_rel_w_pos
+                                             * len(self.curr_pc.data))]
             data_pos *= s_y
             data_pos += t_y
 
-            self.marker.set_data(np.array([[rect_rel_w_pos, data_pos]]))
+            self.marker.set_data(np.array([[self.rect_rel_w_pos, data_pos]]))
 
             # TODO: determine margins
             # TODO: find out how to make ticks and labels more dense
             # Axes
-            t_y = (curr_pc.plot_position[1] / n_channels)
+            t_y = (self.curr_pc.plot_position[1] / n_channels)
             y_margin = 0
             self.xaxis.pos = [[rect.left, t_y + y_margin],
                               [rect.right, t_y + y_margin]]
@@ -451,24 +457,24 @@ class SignalDisplay(QWidget):
             if lpos is not None:
                 fixed = lpos[0]
                 right_angle = np.array([fixed[0], data_pos])
-                moving = np.array([rect_rel_w_pos, data_pos])
+                moving = np.array([self.rect_rel_w_pos, data_pos])
                 whole_line = np.vstack([fixed, right_angle, moving])
                 self.measure_line.set_data(pos=whole_line)
 
                 # Time
-                max_step = 1/curr_pc.fsamp
+                max_step = 1/self.curr_pc.fsamp
                 time_dist = moving[0]-fixed[0]
                 time_dist -= time_dist % max_step
-                oround = int(np.ceil((np.log10(curr_pc.fsamp))))
+                oround = int(np.ceil((np.log10(self.curr_pc.fsamp))))
                 time_str = format(time_dist, '.'+str(oround)+'f')+' s'
                 time_str_pos = moving.copy()
 
                 # Amplitude
-                max_step = curr_pc.ufact
+                max_step = self.curr_pc.ufact
                 amp_dist = (moving[1] - fixed[1]) / s_y
                 amp_dist *= max_step
                 amp_dist -= amp_dist % amp_dist
-                amp_str = (format(amp_dist, '.5f') + ' ' + curr_pc.unit)
+                amp_str = (format(amp_dist, '.5f') + ' ' + self.curr_pc.unit)
                 amp_str_pos = moving.copy()
                 amp_str_pos[0] = moving[0]
                 fsize = self.describe_text.font_size
