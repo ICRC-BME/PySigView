@@ -19,13 +19,12 @@ United States
 
 # Third party imports
 import numpy as np
-from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIntValidator, QDoubleValidator
 from PyQt5.QtWidgets import (QVBoxLayout, QWidget, QComboBox, QLineEdit,
                              QCheckBox, QFormLayout, QHBoxLayout, QSlider)
 from vispy import scene, color
 from vispy.scene import Line, AxisWidget
-from vispy.scene.cameras import PanZoomCamera
 from vispy.visuals.transforms import STTransform
 
 # Local imports
@@ -44,7 +43,6 @@ class SignalWidget(QWidget):
         self.sd = self.plugin.sd
 
         # Variables
-        self.fixed_point = None
         self.measurement_mode = False
         self.curr_pc = None
         self.sig_start = None
@@ -674,7 +672,42 @@ class Measurement(BasePluginWidget):
 
     def save_plugin_data(self):
         """Function to run when saving session"""
-        return None
+
+        tw = self.tools_widget
+
+        general_tools = {}
+        general_tools['spect_type'] = tw.general_tools.cb.currentIndex()
+        general_tools['low_lim'] = tw.general_tools.low_lim_le.text()
+        general_tools['high_lim'] = tw.general_tools.high_lim_le.text()
+
+        spectrum_tools = {}
+        spectrum_tools['mean_smooth'] = tw.spectrum_tools.mean_le.text()
+
+        spectrogram_tools = {}
+        spectrogram_tools['n_fft'] = tw.spectrogram_tools.n_fft_le.text()
+        spectrogram_tools['step'] = tw.spectrogram_tools.step_le.text()
+        spectrogram_tools['cmap'] = tw.spectrogram_tools.cmap_cb.currentIndex()
+        spectrogram_tools['interp_cb'] = (tw.spectrogram_tools.
+                                          interp_cb.currentIndex())
+        spectrogram_tools['normalize_chb'] = (tw.spectrogram_tools.
+                                              normalize_chb.isChecked())
+        spectrogram_tools['clim_low_le'] = int((tw.spectrogram_tools.
+                                                clim_low_le.text()))
+        spectrogram_tools['clim_high_le'] = int((tw.spectrogram_tools.
+                                                 clim_high_le.text()))
+
+        tools = {'general': general_tools,
+                 'spectrum': spectrum_tools,
+                 'spectrogram': spectrogram_tools}
+
+        sw = self.signal_widget
+        signal_props = {'sig_start': sw.sig_start,
+                        'sig_stop': sw.sig_stop}
+
+        out_dict = {'tools': tools,
+                    'signal': signal_props}
+
+        return out_dict
 
     def on_first_registration(self):
         """Action to be performed on first plugin registration."""
