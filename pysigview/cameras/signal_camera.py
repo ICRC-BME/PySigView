@@ -127,8 +127,6 @@ class SignalCamera(Magnify1DCamera):
 
         self.rect = rect
 
-        self.signal_display.subview_changed.emit()
-
     def pan(self, *pan):
         """Pan the view.
 
@@ -146,8 +144,6 @@ class SignalCamera(Magnify1DCamera):
 
         self.rect = self.rect + pan
 
-        self.signal_display.subview_changed.emit()
-
     def viewbox_mouse_event(self, event):
         """ViewBox mouse event handler
 
@@ -158,8 +154,6 @@ class SignalCamera(Magnify1DCamera):
         """
         # When the attached ViewBox reseives a mouse event, it is sent to the
         # camera here.
-
-#        print(event.type)
 
         if event.handled or not self.interactive:
             return
@@ -202,11 +196,5 @@ class SignalCamera(Magnify1DCamera):
                     # accept the event if it is button 1 or 2.
                     # This is required in order to receive future events
                     event.handled = event.button in [1, 2]
-
-            # start the timer to smoothly modify the transform properties.
-            if not self.timer.running:
-                if self.mouse_pos is None:
-                    self.mouse_pos = event.pos[:2]
-                self.timer.start()
 
             self._update_transform()

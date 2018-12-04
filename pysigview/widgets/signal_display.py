@@ -381,6 +381,9 @@ class SignalDisplay(QWidget):
 
     def on_mouse_move(self, event):
 
+        if 1 in event.buttons or 2 in event.buttons and not event.modifiers:
+            self.subview_changed.emit()
+        
         # Get position relative to zoom
         pos = event.pos[:2]
         w = self.signal_view.width
