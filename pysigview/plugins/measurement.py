@@ -59,8 +59,8 @@ class SignalWidget(QWidget):
         self.mean_filter = None
 
         # Setup camera
-        self.signal_camera = PanZoomCamera()
-        self.spectrum_camera = PanZoomCamera()
+        self.signal_camera = SignalCamera()
+        self.spectrum_camera = SignalCamera()
 
         self.canvas = scene.SceneCanvas(show=True, keys='interactive',
                                         parent=self)
@@ -208,6 +208,7 @@ class SignalWidget(QWidget):
 
         self.signal_camera.rect = (0, 0), (len(data) * s_x,
                                            np.max(data)-np.min(data))
+        self.signal_camera.limit_rect = self.signal_camera.rect
 
         if self.spect_type == 'spectrum':
             # Spectrum line
@@ -238,7 +239,7 @@ class SignalWidget(QWidget):
 
             s_x = (self.curr_pc.fsamp / 2) / len(s)
             s_y = 1
-            s_z = 0
+            s_z = 1
             scale = [s_x, s_y, s_z]
 
             transform = STTransform(scale)
@@ -248,15 +249,18 @@ class SignalWidget(QWidget):
             self.spectrum_line.set_data(pos=pos, color=self.curr_pc.line_color)
             self.spectrum_line.transform = transform
 
-            freqs = freqs[low_lim_idx:high_lim_idx]
+            # Adjust camera limits
+#            pos = (0, 0)
+#            size = (freqs[-1], np.max(s))
+#            self.spectrum_camera.limit_rect = pos, size
 
+            # Adjust camera view
+            freqs = freqs[low_lim_idx:high_lim_idx]
             if len(freqs) == 0:
                 return
-
             pos = (freqs[0], 0)
             size = (freqs[-1] - freqs[0],
                     np.max(s[low_lim_idx:high_lim_idx]))
-
             self.spectrum_camera.rect = pos, size
 
         elif self.spect_type == 'spectrogram':
@@ -285,19 +289,22 @@ class SignalWidget(QWidget):
             if n_windows == 0 or len(freqs) == 0:
                 return
 
-            s_x = (len(data) / n_windows)/self.curr_pc.fsamp
+            s_x = len(data) / self.curr_pc.fsamp
             s_y = (self.curr_pc.fsamp / 2) / len(freqs)
-            s_z = 0
+            s_z = 1
             scale = [s_x, s_y, s_z]
-
             transform = STTransform(scale)
-
             self.spectrogram.transform = transform
 
+            # Adjust camera limits
+            pos = (0, 0)
+            size = (s_x, freqs[-1])
+            self.spectrum_camera.limit_rect = pos, size
+
+            # Adjust camera view
             freqs = freqs[low_lim_idx:high_lim_idx-1]
             pos = (0, freqs[0])
-            size = (n_windows * s_x, freqs[-1] - freqs[0])
-
+            size = (s_x, freqs[-1] - freqs[0])
             self.spectrum_camera.rect = pos, size
 
 

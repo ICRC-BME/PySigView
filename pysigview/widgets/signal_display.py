@@ -106,7 +106,7 @@ class SignalDisplay(QWidget):
         self.visible_channels = None
 
         # Setup camera
-        self.camera = SignalCamera(self)
+        self.camera = SignalCamera()
 
         # Autoslide
         self.slide_worker_stopped = True
