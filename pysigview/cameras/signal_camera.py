@@ -206,4 +206,10 @@ class SignalCamera(Magnify1DCamera):
                     # This is required in order to receive future events
                     event.handled = event.button in [1, 2]
 
+            # start the timer to smoothly modify the transform properties.
+            if not self.timer.running:
+                if self.mouse_pos is None:
+                    self.mouse_pos = event.pos[:2]
+                self.timer.start()
+
             self._update_transform()

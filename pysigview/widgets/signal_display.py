@@ -81,7 +81,8 @@ class SignalDisplay(QWidget):
         self.sample_map = []
         self.plot_containers = []
         # TODO: Selected signal plot used for data shifting, colors, etc
-        self.master_plot = None
+        self.master_pc = None
+        self.master_plot = None  # TODO - to be deleted
         self.curr_pc = None
         self.rect_rel_w_pos = None
         self.rect_rel_h_pos = None

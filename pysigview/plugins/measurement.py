@@ -111,7 +111,9 @@ class SignalWidget(QWidget):
 
         self.signal_line = Line(parent=self.signal_view.scene, width=1)
         self.spectrum_line = Line(parent=self.spectrum_view.scene, width=1)
-        self.spectrogram = Spectrogram(parent=self.spectrum_view.scene)
+        self.spectrogram = Spectrogram([0], parent=self.spectrum_view.scene)
+        # FIXME: we have to introduce dummy data ot spectrogram, othrewise
+        # the scalling is messedup - this is a Vispy visual problem
 
         # ----- Set layout -----
         # Widget layout
@@ -240,17 +242,15 @@ class SignalWidget(QWidget):
             s_z = 1
             scale = [s_x, s_y, s_z]
 
-            transform = STTransform(scale)
-
             pos = np.c_[np.arange(len(s)), s]
 
             self.spectrum_line.set_data(pos=pos, color=self.curr_pc.line_color)
-            self.spectrum_line.transform = transform
+            self.spectrum_line.transform = STTransform(scale)
 
             # Adjust camera limits
-#            pos = (0, 0)
-#            size = (freqs[-1], np.max(s))
-#            self.spectrum_camera.limit_rect = pos, size
+            pos = (0, 0)
+            size = (freqs[-1], np.max(s))
+            self.spectrum_camera.limit_rect = pos, size
 
             # Adjust camera view
             freqs = freqs[low_lim_idx:high_lim_idx]
@@ -264,7 +264,6 @@ class SignalWidget(QWidget):
         elif self.spect_type == 'spectrogram':
 
             self.spectrogram.x = data
-
             freqs = self.spectrogram.freqs
 
             if self.low_lim is not None:
@@ -291,8 +290,7 @@ class SignalWidget(QWidget):
             s_y = (self.curr_pc.fsamp / 2) / len(freqs)
             s_z = 1
             scale = [s_x, s_y, s_z]
-            transform = STTransform(scale)
-            self.spectrogram.transform = transform
+            self.spectrogram.transform = STTransform(scale)
 
             # Adjust camera limits
             pos = (0, 0)
@@ -348,7 +346,7 @@ class GeneralTools(QWidget):
 
     def set_low_lim(self):
         if self.low_lim_le.text() != '':
-            self.plugin.signal_widget.low_lim = int(self.low_lim_le.text())
+            self.plugin.signal_widget.low_lim = float(self.low_lim_le.text())
             self.plugin.signal_widget.update_signals()
         else:
             self.plugin.signal_widget.low_lim = None
@@ -356,7 +354,7 @@ class GeneralTools(QWidget):
 
     def set_high_lim(self):
         if self.high_lim_le.text() != '':
-            self.plugin.signal_widget.high_lim = int(self.high_lim_le.text())
+            self.plugin.signal_widget.high_lim = float(self.high_lim_le.text())
             self.plugin.signal_widget.update_signals()
         else:
             self.plugin.signal_widget.high_lim = None
@@ -668,12 +666,46 @@ class Measurement(BasePluginWidget):
 
     def load_plugin_data(self, data):
         """Function to run when loading session"""
-        return None
+
+        tw = self.tools_widget
+        sw = self.signal_widget
+
+        sw.sig_start = data['signal']['sig_start']
+        sw.sig_stop = data['signal']['sig_stop']
+        sw.curr_pc = self.sd.curr_pc
+        sw.spectrogram.fs = self.sd.curr_pc.fsamp
+
+        gt = data['tools']['general']
+        tw.general_tools.cb.setCurrentIndex(gt['spect_type'])
+        tw.general_tools.low_lim_le.setText(gt['low_lim'])
+        tw.general_tools.high_lim_le.setText(gt['high_lim'])
+        tw.general_tools.set_low_lim()
+        tw.general_tools.set_high_lim()
+
+        st = data['tools']['spectrum']
+        tw.spectrum_tools.mean_le.setText(st['mean_smooth'])
+        tw.spectrum_tools.set_mean_smooth()
+
+        st = data['tools']['spectrogram']
+        tw.spectrogram_tools.n_fft_le.setText(st['n_fft'])
+        tw.spectrogram_tools.step_le.setText(st['step'])
+        tw.spectrogram_tools.cmap_cb.setCurrentIndex(st['cmap'])
+        tw.spectrogram_tools.interp_cb.setCurrentIndex(st['interp_cb'])
+        tw.spectrogram_tools.normalize_chb.setCheckState(st['normalize_chb'])
+        tw.spectrogram_tools.clim_low_le.setText(str(st['clim_low_le']))
+        tw.spectrogram_tools.clim_high_le.setText(str(st['clim_high_le']))
+        tw.spectrogram_tools.set_n_fft()
+        tw.spectrogram_tools.set_step()
+        tw.spectrogram_tools.set_cmap(st['cmap'])
+        tw.spectrogram_tools.set_interpolation(st['interp_cb'])
+        tw.spectrogram_tools.set_normalize(st['normalize_chb'])
+        tw.spectrogram_tools.set_clim()
 
     def save_plugin_data(self):
         """Function to run when saving session"""
 
         tw = self.tools_widget
+        sw = self.signal_widget
 
         general_tools = {}
         general_tools['spect_type'] = tw.general_tools.cb.currentIndex()
@@ -700,7 +732,6 @@ class Measurement(BasePluginWidget):
                  'spectrum': spectrum_tools,
                  'spectrogram': spectrogram_tools}
 
-        sw = self.signal_widget
         signal_props = {'sig_start': sw.sig_start,
                         'sig_stop': sw.sig_stop}
 
