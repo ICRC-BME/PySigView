@@ -620,6 +620,12 @@ class Measurement(BasePluginWidget):
 
         self.setLayout(layout)
 
+    def conn_disconn_signals(self, visible):
+        if visible:
+            self.sd.input_recieved.connect(self.signal_widget.recieve_input)
+        else:
+            self.sd.input_recieved.disconnect(self.signal_widget.recieve_input)
+
     # ------ PysigviewPluginWidget API ----------------------------------------
     def get_plugin_title(self):
         """
@@ -660,9 +666,9 @@ class Measurement(BasePluginWidget):
         """Register plugin in Pysigview's main window."""
         self.create_toggle_view_action()
 
-        self.sd.input_recieved.connect(self.signal_widget.recieve_input)
-
         self.main.add_dockwidget(self)
+
+        self.dockwidget.visibilityChanged.connect(self.conn_disconn_signals)
 
     def delete_plugin_data(self):
         """Deletes plugin data"""
