@@ -157,13 +157,15 @@ class SignalDisplay(QWidget):
         self.crosshair = Crosshair(parent=self.signal_view.scene)
         self.marker = Markers(parent=self.signal_view.scene)
         self.xaxis = Axis(parent=self.signal_view.scene,
-                          tick_direction=(0., -1.),
+                          tick_direction=(0., 1.),
                           axis_width=1, tick_width=1,
                           anchors=('center', 'top'))
+        self.x_tick_spacing = 1000
         self.yaxis = Axis(parent=self.signal_view.scene,
                           tick_direction=(1., 0.),
                           axis_width=1, tick_width=1,
                           anchors=('left', 'center'))
+        self.y_tick_spacing = 100
         self.measure_line = Line(parent=self.signal_view.scene,
                                  width=3)
         self.describe_text = MulticolorText(anchor_x='left',
@@ -384,7 +386,7 @@ class SignalDisplay(QWidget):
 
         if 1 in event.buttons or 2 in event.buttons and not event.modifiers:
             self.subview_changed.emit()
-        
+
         # Get position relative to zoom
         pos = event.pos[:2]
         w = self.signal_view.width
@@ -444,18 +446,27 @@ class SignalDisplay(QWidget):
             self.marker.set_data(np.array([[self.rect_rel_w_pos, data_pos]]))
 
             # TODO: determine margins
-            # TODO: find out how to make ticks and labels more dense
             # Axes
             t_y = (self.curr_pc.plot_position[1] / n_channels)
             y_margin = 0
-            self.xaxis.pos = [[rect.left, t_y + y_margin],
-                              [rect.right, t_y + y_margin]]
+            self.xaxis.pos = [[rect.left,
+                               t_y + y_margin],
+                              [rect.left+(rect.width*self.x_tick_spacing),
+                               t_y + y_margin]]
             rel_diff = (rect.right - rect.left) * np.diff(pc.uutc_ss)
             self.xaxis.domain = tuple([0, rel_diff/1000000])
+            s = [1/self.x_tick_spacing, 1]
+            t = [rect.left-rect.left*s[0], 0]
+            self.xaxis.transform = scene.transforms.STTransform(s, t)
 
             x_margin = 0
-            self.yaxis.pos = [[rect.left + x_margin, t_y],
-                              [rect.left + x_margin, t_y + (1/n_channels)]]
+            self.yaxis.pos = [[rect.left + x_margin,
+                               t_y],
+                              [rect.left + x_margin,
+                               t_y + ((1/n_channels)*self.y_tick_spacing)]]
+            s = [1, 1/self.y_tick_spacing]
+            t = [0, t_y-t_y*s[1]]
+            self.yaxis.transform = scene.transforms.STTransform(s, t)
 
             lpos = self.measure_line.pos
             if lpos is not None:

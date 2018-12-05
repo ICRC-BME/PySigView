@@ -113,7 +113,7 @@ class SignalWidget(QWidget):
         self.spectrum_line = Line(parent=self.spectrum_view.scene, width=1)
         self.spectrogram = Spectrogram([0], parent=self.spectrum_view.scene)
         # FIXME: we have to introduce dummy data ot spectrogram, othrewise
-        # the scalling is messedup - this is a Vispy visual problem
+        # the scalling is messed up - this is a Vispy visual problem
 
         # ----- Set layout -----
         # Widget layout
