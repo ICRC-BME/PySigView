@@ -153,7 +153,11 @@ class SignalWidget(QWidget):
 
         if self.curr_pc is not None:
 
-            # TODO this should be triggered if sampling frequency changes
+            if self.curr_pc.fsamp != self.sd.curr_pc.fsamp:
+                self.low_lim = None
+                self.high_lim = None
+                self.curr_pc = self.sd.curr_pc
+
             if self.low_lim is None:
                 self.plugin.tools_widget.general_tools \
                     .low_lim_le.setText('0')
