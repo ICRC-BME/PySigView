@@ -28,6 +28,8 @@ from vispy.scene import Line, AxisWidget
 from vispy.visuals.transforms import STTransform
 
 # Local imports
+from pysigview.config.main import CONF
+
 from pysigview.plugins.base import BasePluginWidget
 from pysigview.cameras.signal_camera import SignalCamera
 from pysigview.visuals.spectrogram_visual import Spectrogram
@@ -41,6 +43,7 @@ class SignalWidget(QWidget):
         # Useful trnascripts
         self.plugin = self.parent()
         self.sd = self.plugin.sd
+        self.CONF_SECTION = self.parent().CONF_SECTION
 
         # Variables
         self.measurement_mode = False
@@ -61,24 +64,31 @@ class SignalWidget(QWidget):
         self.spectrum_camera = SignalCamera()
 
         self.canvas = scene.SceneCanvas(show=True, keys='interactive',
-                                        parent=self)
+                                        parent=self,
+                                        bgcolor=CONF.get(self.CONF_SECTION,
+                                                         'bgcolor'))
 
         self.view_grid = self.canvas.central_widget.add_grid(margin=10)
 
         # Signal
         self.signal_view = self.view_grid.add_view(row=0, col=1, row_span=2,
                                                    camera=self.signal_camera)
+        axis_color = CONF.get(self.CONF_SECTION, 'axis_color')
         self.signal_yaxis = AxisWidget(orientation='left',
                                        axis_label='Amplitude',
                                        axis_font_size=12,
-                                       tick_label_margin=5)
+                                       tick_label_margin=5,
+                                       axis_color=axis_color,
+                                       tick_color=axis_color)
         self.signal_yaxis.width_max = 60
         self.view_grid.add_widget(self.signal_yaxis, row=0, col=0, row_span=2)
 
         self.signal_xaxis = scene.AxisWidget(orientation='bottom',
                                              axis_label='Time [s]',
                                              axis_font_size=12,
-                                             tick_label_margin=5)
+                                             tick_label_margin=5,
+                                             axis_color=axis_color,
+                                             tick_color=axis_color)
 
         self.signal_xaxis.height_max = 55
         self.view_grid.add_widget(self.signal_xaxis, row=2, col=1)
@@ -112,6 +122,7 @@ class SignalWidget(QWidget):
         self.signal_line = Line(parent=self.signal_view.scene, width=1)
         self.spectrum_line = Line(parent=self.spectrum_view.scene, width=1)
         self.spectrogram = Spectrogram([0], parent=self.spectrum_view.scene)
+        self.spectrogram.visible = False
         # FIXME: we have to introduce dummy data ot spectrogram, othrewise
         # the scalling is messed up - this is a Vispy visual problem
 

@@ -154,20 +154,29 @@ class SignalDisplay(QWidget):
 
         # TODO - Add crosshair color to CONF
         # Measurements
-        self.crosshair = Crosshair(parent=self.signal_view.scene)
+        ch_color = CONF.get(self.CONF_SECTION, 'init_crosshair_color')
+        self.crosshair = Crosshair(parent=self.signal_view.scene,
+                                   color=hex2rgba(ch_color))
+        m_color = CONF.get(self.CONF_SECTION, 'init_marker_color')
+        # TODO marker color
         self.marker = Markers(parent=self.signal_view.scene)
         self.xaxis = Axis(parent=self.signal_view.scene,
                           tick_direction=(0., 1.),
                           axis_width=1, tick_width=1,
-                          anchors=('center', 'top'))
+                          anchors=('center', 'top'),
+                          axis_color=m_color,
+                          tick_color=m_color)
         self.x_tick_spacing = 1000
         self.yaxis = Axis(parent=self.signal_view.scene,
                           tick_direction=(1., 0.),
                           axis_width=1, tick_width=1,
-                          anchors=('left', 'center'))
+                          anchors=('left', 'center'),
+                          axis_color=m_color,
+                          tick_color=m_color)
         self.y_tick_spacing = 100
         self.measure_line = Line(parent=self.signal_view.scene,
-                                 width=3)
+                                 width=3, color=m_color)
+        # TODO - textbox
         self.describe_text = MulticolorText(anchor_x='left',
                                             anchor_y='bottom',
                                             parent=self.signal_view.scene)

@@ -68,7 +68,9 @@ DEFAULTS = {'DEFAULTS': {'enable': True
                                'init_line_color': '#ffff00ff',
                                'init_time_scale': 10,  # in seconds
                                'label_font_size': 12,
-                               'antialiasing': 'min_max'
+                               'antialiasing': 'min_max',
+                               'init_crosshair_color': '#ffffffff',
+                               'init_marker_color': '#ffffffff'
                                },
             'channels': {
                          },
@@ -91,13 +93,16 @@ DEFAULTS = {'DEFAULTS': {'enable': True
                          'port': '',
                          'username': ''
                          },
-            'transforms': {'enable': True
+            'transforms': {'enable': True,
                            },
+            'measurement': {'enable': True,
+                            'bgcolor': '#606060ff',
+                            'axis_color': '#ffffffff'},
             'shortcuts': {
                           },
             }
 
-CONF_VERSION = '0.4.0'
+CONF_VERSION = '0.6.0'
 
 # Main configuration instance
 try:
