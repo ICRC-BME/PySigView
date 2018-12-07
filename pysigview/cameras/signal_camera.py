@@ -31,38 +31,48 @@ class SignalCamera(Magnify1DCamera):
     Reimplemented Vispy PanZoomCamera
     """
 
-    def __init__(self, signal_display):
+    def __init__(self):
         super(SignalCamera, self).__init__(mag=1)
 
-        self.signal_display = signal_display
+        self._limit_rect = Rect(0, 0, 1, 1)
+
+    @property
+    def limit_rect(self):
+        return self._limit_rect
+
+    @limit_rect.setter
+    def limit_rect(self, args):
+        if isinstance(args, tuple):
+            rect = Rect(*args)
+        elif args is None:
+            rect = Rect(-np.inf, -np.inf, np.inf, np.inf)
+        else:
+            rect = Rect(args)
+
+        if self._limit_rect != rect:
+            self._limit_rect = rect
 
     def limit_zoom(self, rect):
-        if rect.left < 0:
-            rect.left = 0
-        if rect.right > 1:
-            rect.right = 1
-        if rect.bottom < 0:
-            rect.bottom = 0
-        if rect.top > 1:
-            rect.top = 1
+        if rect.left < self._limit_rect.left:
+            rect.left = self._limit_rect.left
+        if rect.right > self._limit_rect.right:
+            rect.right = self._limit_rect.right
+        if rect.bottom < self._limit_rect.bottom:
+            rect.bottom = self._limit_rect.bottom
+        if rect.top > self._limit_rect.top:
+            rect.top = self._limit_rect.top
 
     def limit_pan(self, pan):
-        rect = Rect(self.rect)
-
-        if self.rect.left <= 0 and pan[0] < 0:
-            rect.left = 0
+        if self.rect.left <= self._limit_rect.left and pan[0] < 0:
             pan[0] = 0
 
-        if self.rect.right >= 1 and pan[0] > 0:
-            rect.left = 0
+        if self.rect.right >= self._limit_rect.right and pan[0] > 0:
             pan[0] = 0
 
-        if self.rect.bottom <= 0 and pan[1] < 0:
-            rect.left = 0
+        if self.rect.bottom <= self._limit_rect.bottom and pan[1] < 0:
             pan[1] = 0
 
-        if self.rect.top >= 1 and pan[1] > 0:
-            rect.left = 0
+        if self.rect.top >= self._limit_rect.top and pan[1] > 0:
             pan[1] = 0
 
     def scale_magnification(self, scale):
@@ -126,8 +136,6 @@ class SignalCamera(Magnify1DCamera):
 
         self.rect = rect
 
-        self.signal_display.subview_changed.emit()
-
     def pan(self, *pan):
         """Pan the view.
 
@@ -145,8 +153,6 @@ class SignalCamera(Magnify1DCamera):
 
         self.rect = self.rect + pan
 
-        self.signal_display.subview_changed.emit()
-
     def viewbox_mouse_event(self, event):
         """ViewBox mouse event handler
 
@@ -157,8 +163,6 @@ class SignalCamera(Magnify1DCamera):
         """
         # When the attached ViewBox reseives a mouse event, it is sent to the
         # camera here.
-
-#        print(event.type)
 
         if event.handled or not self.interactive:
             return

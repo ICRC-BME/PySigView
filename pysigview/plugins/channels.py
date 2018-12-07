@@ -328,13 +328,11 @@ class visible_channels(QTreeWidget):
                 for container in containers:
                     cont_i = item.indexOfChild(container)
                     self.sd.plots_changed.disconnect(container.update_pas)
-                    self.sd.remove_plot_container(container.pvc)
                     item.takeChild(cont_i)
                 self.takeTopLevelItem(coll_i)
 
             elif isinstance(item, PlotContainerItem):
                 self.sd.plots_changed.disconnect(item.update_pas)
-                self.sd.remove_plot_container(item.pvc)
                 item.parent().removeChild(item)
 
         self.update_plot_collection_labels()
@@ -583,7 +581,6 @@ class Channels(BasePluginWidget):
             for container in containers:
                 cont_i = item.indexOfChild(container)
                 self.sd.plots_changed.disconnect(container.update_pas)
-                self.sd.remove_plot_container(container.pvc)
                 item.takeChild(cont_i)
             self.visible_channels.takeTopLevelItem(coll_i)
 

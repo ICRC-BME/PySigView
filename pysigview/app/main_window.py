@@ -272,6 +272,11 @@ class MainWindow(QMainWindow):
         self.console = Console(self)
         self.console.register_plugin()
 
+        # Measurement
+        from pysigview.plugins.measurement import Measurement
+        self.measurement = Measurement(self)
+        self.measurement.register_plugin()
+
         # ----- Menu bar actions ----
         self.set_splash("Setting up main window menus...")
 
@@ -638,6 +643,7 @@ class MainWindow(QMainWindow):
 
         print(ss['main'].keys())
 
+        # TODO - if the path is missing user should now the original path
         if 'session_path' in ss['main'].keys():
             if os.path.exists(ss['main']['session_path']):
                 self.open_session(ss['main']['session_path'])
@@ -657,6 +663,20 @@ class MainWindow(QMainWindow):
 
             plugin_instance = getattr(self, plugin_name)
             plugin_instance.load_plugin_data(plugin_data)
+
+            # Trigger signal_display parameter loading ater channels
+            if plugin_name == 'channels':
+                sd = self.signal_display
+                master_pc_pos = ss['signal_display']['master_pc_pos']
+                curr_pc_pos = ss['signal_display']['curr_pc_pos']
+                for pc in sd.get_plot_containers():
+                    if pc.plot_position == master_pc_pos:
+                        sd.master_pc = pc
+                    if pc.plot_position == curr_pc_pos:
+                        sd.curr_pc = pc
+                sd.camera.rect = ss['signal_display']['camera_rect']
+                if ss['signal_display']['grid_on']:
+                    sd.show_grid()
 
     def save_pysigview_session(self):
 
@@ -685,12 +705,24 @@ class MainWindow(QMainWindow):
         else:
             return
 
+        # TODO - run this automatically but channels have to be first!
         # Plugins
         ss['plugins'] = [{'channels': self.channels.save_plugin_data()},
-                         {'annotations': self.annotations.save_plugin_data()}]
+                         {'annotations': self.annotations.save_plugin_data()},
+                         {'measurement': self.measurement.save_plugin_data()}]
 
         # Signal display
-        # TODO - grid settings
+        sd = self.signal_display
+        if sd.curr_pc is None:
+            ss['signal_display']['master_pc_pos'] = None
+        else:
+            ss['signal_display']['master_pc_pos'] = sd.curr_pc.plot_position
+        if sd.curr_pc is None:
+            ss['signal_display']['curr_pc_pos'] = None
+        else:
+            ss['signal_display']['curr_pc_pos'] = sd.curr_pc.plot_position
+        ss['signal_display']['camera_rect'] = sd.camera.rect
+        ss['signal_display']['grid_on'] = sd.grid is not None
 
         with open(path, 'wb') as fid:
             pickle.dump(ss, fid)

@@ -26,7 +26,8 @@ from PyQt5.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QPushButton,
                              QDialog, QFileDialog, QComboBox)
 from PyQt5.QtCore import Qt, pyqtSignal, QSize, QThread
 from vispy import scene, color
-from vispy.scene import LinearRegion, Image, Mesh, GridLines
+from vispy.scene import (LinearRegion, Image, Mesh, GridLines, Markers, Axis,
+                         Line)
 from vispy.util.event import Event
 import numpy as np
 from scipy.io import savemat
@@ -37,6 +38,7 @@ from pysigview.cameras.signal_camera import SignalCamera
 from pysigview.core.visual_container import SignalContainer
 from pysigview.visuals.multicolor_text_visual import MulticolorText
 from pysigview.visuals.multiline_visual import Multiline
+from pysigview.visuals.crosshair_visual import Crosshair
 
 from pysigview.config.main import CONF
 from pysigview.config.utils import get_home_dir
@@ -79,9 +81,14 @@ class SignalDisplay(QWidget):
         self.sample_map = []
         self.plot_containers = []
         # TODO: Selected signal plot used for data shifting, colors, etc
-        self.master_plot = None
+        self.master_pc = None
+        self.master_plot = None  # TODO - to be deleted
+        self.curr_pc = None
+        self.rect_rel_w_pos = None
+        self.rect_rel_h_pos = None
         self.resize_flag = False
         self.highlight_mode = False
+        self.measurement_mode = False
         self.autoscale = False
 
         self.disconts_processed = False
@@ -100,7 +107,7 @@ class SignalDisplay(QWidget):
         self.visible_channels = None
 
         # Setup camera
-        self.camera = SignalCamera(self)
+        self.camera = SignalCamera()
 
         # Autoslide
         self.slide_worker_stopped = True
@@ -145,25 +152,57 @@ class SignalDisplay(QWidget):
 
         # ----- Initial visuals operations-----
 
-        # TODO - for measurment mode - scene.visual_at() / visuals_at()
+        # TODO - Add crosshair color to CONF
+        # Measurements
+        ch_color = CONF.get(self.CONF_SECTION, 'init_crosshair_color')
+        self.crosshair = Crosshair(parent=self.signal_view.scene,
+                                   color=hex2rgba(ch_color))
+        m_color = CONF.get(self.CONF_SECTION, 'init_marker_color')
+        # TODO marker color
+        self.marker = Markers(parent=self.signal_view.scene)
+        self.xaxis = Axis(parent=self.signal_view.scene,
+                          tick_direction=(0., 1.),
+                          axis_width=1, tick_width=1,
+                          anchors=('center', 'top'),
+                          axis_color=m_color,
+                          tick_color=m_color)
+        self.x_tick_spacing = 1000
+        self.yaxis = Axis(parent=self.signal_view.scene,
+                          tick_direction=(1., 0.),
+                          axis_width=1, tick_width=1,
+                          anchors=('left', 'center'),
+                          axis_color=m_color,
+                          tick_color=m_color)
+        self.y_tick_spacing = 100
+        self.measure_line = Line(parent=self.signal_view.scene,
+                                 width=3, color=m_color)
+        # TODO - textbox
+        self.describe_text = MulticolorText(anchor_x='left',
+                                            anchor_y='bottom',
+                                            parent=self.signal_view.scene)
+
+        # Signal highlighting
         self.highlight_rec = Mesh(parent=self.signal_view.scene,
                                   color=np.array([0., 0., 0., 0.]),
                                   mode='triangle_fan')
+
+        # Grid
         self.grid = None
 
+        # Discontinuity
         self.disc_marker = LinearRegion(np.array([0, 0]),
                                         np.array([[0., 0., 0., 0.],
                                                  [0., 0., 0., 0.]]),
                                         parent=self.signal_view.scene)
 
-        self.label_visual = MulticolorText(anchor_x='left',
-                                           anchor_y='top',
-                                           parent=self.signal_view.scene)
         self.signal_label_dict = {}
-
+        # Main signal visal with labels
         w = CONF.get(self.CONF_SECTION, 'init_line_width')
         self.signal_visual = Multiline(width=w,
                                        parent=self.signal_view.scene)
+        self.label_visual = MulticolorText(anchor_x='left',
+                                           anchor_y='top',
+                                           parent=self.signal_view.scene)
 
         # TODO - one set of x and y axes for measurements
 
@@ -214,6 +253,7 @@ class SignalDisplay(QWidget):
         self.plots_changed.connect(self.subsample)
         self.plots_changed.connect(self.rescale_grid)
         self.input_recieved.connect(self.set_highlight_mode)
+        self.input_recieved.connect(self.show_measure_line)
         self.canvas_resized.connect(self.update_subsample)
 
     # ----- Setup functions -----
@@ -327,53 +367,167 @@ class SignalDisplay(QWidget):
         if event.type not in ('key_press', 'key_release'):
             return
 
-        if event.key not in ('shift', 'ctrl'):
+        if event.key not in ('shift', 'control'):
             return
 
         if event.type == 'key_press' and event.key == 'shift':
             self.highlight_mode = True
-        elif event.type == 'key_press' and event.key == 'ctrl':
+            self.highlight_rec.visible = True
+        elif event.type == 'key_press' and event.key == 'control':
             self.measurement_mode = True
-        else:
+            self.crosshair.visible = True
+            self.marker.visible = True
+            self.xaxis.visible = True
+            self.yaxis.visible = True
+        elif event.type == 'key_release' and event.key == 'shift':
             self.highlight_mode = False
+            self.highlight_rec.visible = False
+        elif event.type == 'key_release' and event.key == 'control':
             self.measurement_mode = False
-
-            # Erase the rectangle
-            self.highlight_rec.color = (0, 0, 0, 0.00001)
-
-            # Erase cursor cross
+            self.crosshair.visible = False
+            self.marker.visible = False
+            self.xaxis.visible = False
+            self.yaxis.visible = False
+            self.measure_line.visible = False
+            self.describe_text.visible = False
 
     def on_mouse_move(self, event):
+
+        if 1 in event.buttons or 2 in event.buttons and not event.modifiers:
+            self.subview_changed.emit()
+
+        # Get position relative to zoom
+        pos = event.pos[:2]
+        w = self.signal_view.width
+        h = self.signal_view.height
+        rel_w_pos = pos[0] / w
+        # TODO: flip Vispy axis
+        rel_h_pos = (h-pos[1]) / h
+        rect = self.camera.rect
+        self.rect_rel_w_pos = rect.left + (rel_w_pos * rect.width)
+        self.rect_rel_h_pos = rect.bottom + (rel_h_pos * rect.height)
+
+        # Determine the signal plot
+
+        rows = self.visible_channels.get_row_count()
+        cols = self.visible_channels.get_col_count()
+
+        sig_w_pos = self.rect_rel_w_pos * cols
+        sig_h_pos = self.rect_rel_h_pos * rows
+
+        for pc in self.get_plot_containers():
+
+            if ((pc.plot_position[0]
+                 < sig_w_pos
+                 < pc.plot_position[0]+1)
+                and (pc.plot_position[1]
+                     < sig_h_pos
+                     < pc.plot_position[1]+1)):
+
+                self.curr_pc = pc
+                break
+
+        # ??? Instead of modes use event.modifiers???
+
         if self.highlight_mode:
-            # Determine the signal plot
-            # Get cursor positions
-            pos = event.pos[:2]
 
-            rows = self.visible_channels.get_row_count()
-            cols = self.visible_channels.get_col_count()
+            self.highlight_signal(self.curr_pc)
 
-            # Determine the signal plot
-            w = self.signal_view.width
-            h = self.signal_view.height
-            rel_w_pos = pos[0] / w
-            # TODO: flip Vispy axis
-            rel_h_pos = (h-pos[1]) / h
-            rect = self.camera.rect
-            rect_rel_w_pos = rect.left + (rel_w_pos * rect.width)
-            rect_rel_h_pos = rect.bottom + (rel_h_pos * rect.height)
-            sig_w_pos = rect_rel_w_pos * cols
-            sig_h_pos = rect_rel_h_pos * rows
+        if self.measurement_mode:
 
-            for pc in self.get_plot_containers():
+            self.crosshair.set_data([self.rect_rel_w_pos,
+                                     self.rect_rel_h_pos])
 
-                if ((pc.plot_position[0]
-                     < sig_w_pos
-                     < pc.plot_position[0]+1)
-                    and (pc.plot_position[1]
-                         < sig_h_pos
-                         < pc.plot_position[1]+1)):
+            n_channels = self.visible_channels.get_row_count()
 
-                    self.highlight_signal(pc)
+            # Get the location of data point
+            s_y = self.curr_pc.ufact*self.curr_pc.scale_factor
+            t_y = ((-np.nanmean(self.curr_pc.data)
+                    * self.curr_pc.ufact
+                    * self.curr_pc.scale_factor)
+                   + ((0.5+self.curr_pc.plot_position[1]) / n_channels))
+
+            data_pos = self.curr_pc.data[int(self.rect_rel_w_pos
+                                             * len(self.curr_pc.data))]
+            data_pos *= s_y
+            data_pos += t_y
+
+            self.marker.set_data(np.array([[self.rect_rel_w_pos, data_pos]]))
+
+            # TODO: determine margins
+            # Axes
+            t_y = (self.curr_pc.plot_position[1] / n_channels)
+            y_margin = 0
+            self.xaxis.pos = [[rect.left,
+                               t_y + y_margin],
+                              [rect.left+(rect.width*self.x_tick_spacing),
+                               t_y + y_margin]]
+            rel_diff = (rect.right - rect.left) * np.diff(pc.uutc_ss)
+            self.xaxis.domain = tuple([0, rel_diff/1000000])
+            s = [1/self.x_tick_spacing, 1]
+            t = [rect.left-rect.left*s[0], 0]
+            self.xaxis.transform = scene.transforms.STTransform(s, t)
+
+            x_margin = 0
+            self.yaxis.pos = [[rect.left + x_margin,
+                               t_y],
+                              [rect.left + x_margin,
+                               t_y + ((1/n_channels)*self.y_tick_spacing)]]
+            s = [1, 1/self.y_tick_spacing]
+            t = [0, t_y-t_y*s[1]]
+            self.yaxis.transform = scene.transforms.STTransform(s, t)
+
+            lpos = self.measure_line.pos
+            if lpos is not None:
+                fixed = lpos[0]
+                right_angle = np.array([fixed[0], data_pos])
+                moving = np.array([self.rect_rel_w_pos, data_pos])
+                whole_line = np.vstack([fixed, right_angle, moving])
+                self.measure_line.set_data(pos=whole_line)
+
+                # Time
+                max_step = 1/self.curr_pc.fsamp
+                time_dist = moving[0]-fixed[0]
+                time_dist -= time_dist % max_step
+                oround = int(np.ceil((np.log10(self.curr_pc.fsamp))))
+                time_str = format(time_dist, '.'+str(oround)+'f')+' s'
+                time_str_pos = moving.copy()
+
+                # Amplitude
+                max_step = self.curr_pc.ufact
+                amp_dist = (moving[1] - fixed[1]) / s_y
+                amp_dist *= max_step
+                amp_dist -= amp_dist % amp_dist
+                amp_str = (format(amp_dist, '.5f') + ' ' + self.curr_pc.unit)
+                amp_str_pos = moving.copy()
+                amp_str_pos[0] = moving[0]
+                fsize = self.describe_text.font_size
+                amp_str_pos[1] += (((fsize+1)*rect.height)
+                                   / self.signal_view.height)
+
+                self.describe_text.text = [time_str, amp_str]
+                self.describe_text.pos = [time_str_pos, amp_str_pos]
+                self.describe_text.color = np.array([[1., 1., 1., 1.],
+                                                     [1., 1., 1., 1.]],
+                                                    dtype=np.float32)
+
+        self.input_recieved.emit(event)
+
+    def show_measure_line(self, event):
+
+        if event.type != 'mouse_press':
+            return
+
+        modifiers = event.modifiers
+
+        if 'control' in modifiers:
+
+            # Get position relative to zoom
+            self.measure_line.visible = True
+            pos = self.marker._data['a_position'][0][:2]
+            self.measure_line.set_data(pos=np.tile(pos, 3).reshape([3, 2]))
+
+            self.describe_text.visible = True
 
     def on_mouse_press(self, event):
         self.input_recieved.emit(event)
@@ -384,6 +538,7 @@ class SignalDisplay(QWidget):
 
     def on_mouse_wheel(self, event):
 
+        # TODO: subsample for zoom
         # Get x_pos
         x_pos = event.pos[0]
 
@@ -879,9 +1034,6 @@ class SignalDisplay(QWidget):
 
         pc.line_color = np.array(c)
 
-        self.signal_label_dict[pc] = {'pos': [0, 0, 0],
-                                      'color': 'black'}
-
         pc.data_array_pos = [np.where(ci)[0][0]]
 
         # Scale factor
@@ -895,9 +1047,6 @@ class SignalDisplay(QWidget):
             pc.uutc_ss = [pc.start_time, pc.start_time+init_tscale]
 
         return pc
-
-    def remove_plot_container(self, pc):
-        self.signal_label_dict.pop(pc)
 
     def side_flash(self, color=None):
 
@@ -1035,7 +1184,7 @@ class SignalDisplay(QWidget):
         name_list = []
         pos_list = []
         color_list = []
-        for pc, data_dict in self.signal_label_dict.items():
+        for pc in self.get_plot_containers():
 
             if self.signal_visual.visibility[pc._visual_array_idx]:
                 name_list.append(pc.name)

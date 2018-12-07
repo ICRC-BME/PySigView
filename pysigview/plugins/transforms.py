@@ -29,13 +29,11 @@ from PyQt5.QtWidgets import (QVBoxLayout, QHBoxLayout,
                              QPushButton, QCheckBox, QLabel)
 
 from vispy import scene
-from vispy.scene import PanZoomCamera
-from vispy.geometry import Rect
-
 
 # Local imports
 from pysigview.plugins.base import BasePluginWidget
 # from pysigview.config.main import CONF
+from pysigview.cameras.signal_camera import SignalCamera
 from pysigview.widgets.transforms.filters import Filters
 from pysigview.widgets.transforms.montages import Montages
 from pysigview.widgets.transforms.envelopes import Envelopes
@@ -299,8 +297,7 @@ class SignalPreview(QWidget):
                                         bgcolor='white')
 
         # Preview camera
-        rect = Rect((0, 0, 1, 1))
-        self.preview_camera = PanZoomCamera(rect)
+        self.preview_camera = SignalCamera()
 
         # Create view
         cw = self.canvas.central_widget
