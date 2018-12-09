@@ -5,7 +5,7 @@
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtWidgets import (QListWidget, QStackedWidget, QCheckBox,
                              QWidget, QLineEdit, QGridLayout, QFormLayout,
-                             QLabel,  QPushButton, QHBoxLayout)
+                             QLabel,  QPushButton, QHBoxLayout, QDialog)
 from PyQt5.QtGui import QIntValidator
 
 # Local imports
@@ -15,13 +15,15 @@ from pysigview.widgets.color_button import ColorButton
 
 
 # Classes
-class Preferences(QWidget):
+class Preferences(QDialog):
 
     # signals
     preferences_updated = pyqtSignal(name='preferences_updated')
 
     def __init__(self, parent=None):
         super(Preferences, self).__init__(parent)
+
+#        self.main = self.parent()
 
         # basic class atributes
         self.title = 'Preferences'
@@ -70,6 +72,20 @@ class Preferences(QWidget):
         self.sections_selector.currentRowChanged.connect(self._select_section)
         self.butt_cancel.clicked.connect(self.close_widget)
         self.butt_save.clicked.connect(self.save_preferences)
+        self.preferences_updated.connect(self.flush_preferences)
+
+    def flush_preferences(self):
+
+        # check which plugins were updated?
+        # self.preferences_widget.preferences_changed.keys()
+
+        # ------ Plugins -------
+        self.main.navigation_bar.refresh_plugin()
+        self.main.signal_display.refresh_plugin()
+        self.main.database.refresh_plugin()
+
+        # TODO update settings for memory buffer
+        # MemoryBuffer.refresh_plugin()
 
     # ----- create stacked widget functions ------
     def _select_section(self, sec):

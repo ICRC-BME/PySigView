@@ -669,6 +669,11 @@ class MainWindow(QMainWindow):
 
         return
 
+    # ----- Tools menu actions
+
+    def open_preferences(self):
+        self.preferences_widget = Preferences(self)
+
     # ----- Help menu actions
 
     def report_bug(self):
@@ -907,26 +912,6 @@ class MainWindow(QMainWindow):
             self.fullscreen_flag = True
             self.showFullScreen()
         self.__update_fullscreen_action()
-
-    # ----- Preferences ------
-    def open_preferences(self):
-
-        # FIXME how it should be referenced?
-        self.preferences_widget = Preferences()
-        self.preferences_widget.preferences_updated.connect(self.flush_preferences)
-
-    def flush_preferences(self):
-
-        # check which plugins were updated?
-        # self.preferences_widget.preferences_changed.keys()
-
-        # ------ Plugins -------
-        self.navigation_bar.refresh_plugin()
-        self.signal_display.refresh_plugin()
-        self.database.refresh_plugin()
-
-        # TODO update settings for memory buffer
-        # MemoryBuffer.refresh_plugin()
 
     # ----- Shortcuts
 
