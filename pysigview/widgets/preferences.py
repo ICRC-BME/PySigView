@@ -42,10 +42,6 @@ class Preferences(QDialog):
         self.butt_apply = QPushButton('Apply')
         self.butt_ok = QPushButton('OK')
 
-        # Labels
-        self.sections_label = QLabel('Preferences sections:')
-        self.options_label = QLabel('options_editor')
-
         # Form Widgets for selection of config section
         self._build_section_list()
 
@@ -60,8 +56,6 @@ class Preferences(QDialog):
                          alignment=Qt.AlignBottom)
         layout.addWidget(self.butt_ok, 9, 6, 1, 2,
                          alignment=Qt.AlignBottom)
-        layout.addWidget(self.sections_label, 0, 2, 1, 1)
-        layout.addWidget(self.options_label, 0, 5, 1, 1)
         layout.addWidget(self.sections_selector, 1, 1, 4, 3)
         layout.addWidget(self.options_editor, 1, 4, 4, 3)
 
@@ -253,12 +247,13 @@ class Preferences(QDialog):
     def _line_edit(self):
         tmp_widget = self.sender()
         pos_change = tmp_widget.objectName().split('||')
+        print()
         if isinstance(tmp_widget.validator(), QIntValidator):
-            self.preferences_changed[pos_change[0]]
-            [pos_change[1]] = int(tmp_widget.text())
+            self.preferences_changed[pos_change[0]][pos_change[1]] \
+                = int(tmp_widget.text())
         else:
-            self.preferences_changed[pos_change[0]]
-            [pos_change[1]] = tmp_widget.text()
+            self.preferences_changed[pos_change[0]][pos_change[1]] \
+                = tmp_widget.text()
 
     # ----- control button signals ------
 
