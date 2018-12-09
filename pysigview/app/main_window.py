@@ -213,6 +213,9 @@ class MainWindow(QMainWindow):
         # Plugin menu
         self.plugins_menu = self.menuBar().addMenu('&Plugins')
 
+        # Tools menu
+        self.tools_menu = self.menuBar().addMenu('&Tools')
+
         # Help menu
         self.help_menu = self.menuBar().addMenu('&Help')
 
@@ -316,16 +319,10 @@ class MainWindow(QMainWindow):
                                     triggered=self.close,
                                     context=Qt.ApplicationShortcut)
 
-        preferences_action = create_action(self, '&Open preferences',
-                                           icon=None,
-                                           tip='&Open preferences for pysigview',
-                                           triggered=self.open_preferences,
-                                           context=Qt.ApplicationShortcut)
-
         self.file_menu_actions = [open_f_action, open_s_action, None,
                                   connect_s_action, None,
                                   open_ss_action, save_ss_action, None,
-                                  exit_action, preferences_action]
+                                  exit_action]
 
         self.set_splash("")
         self.splash.hide()
@@ -334,8 +331,13 @@ class MainWindow(QMainWindow):
         # Created in pos_visible_setup otherwise not working properly at start
 
         # Tools menu
-        # Preferences...what else?
-#        preferences
+        preferences_action = create_action(self, '&Open preferences',
+                                           icon=None,
+                                           tip=('&Open preferences'
+                                                ' for pysigview'),
+                                           triggered=self.open_preferences,
+                                           context=Qt.ApplicationShortcut)
+        self.tools_menu_actions = [preferences_action]
 
         # Help menu
         report_bug_action = create_action(self, '&Report bug',
@@ -353,6 +355,7 @@ class MainWindow(QMainWindow):
 
         # Filling menu / toolbar entries
         add_actions(self.file_menu, self.file_menu_actions)
+        add_actions(self.tools_menu, self.tools_menu_actions)
         add_actions(self.help_menu, self.help_menu_actions)
 
         # Window set-up
