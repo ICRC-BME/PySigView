@@ -23,7 +23,7 @@ class Preferences(QDialog):
     def __init__(self, parent=None):
         super(Preferences, self).__init__(parent)
 
-#        self.main = self.parent()
+        self.main = self.parent()
 
         # basic class atributes
         self.title = 'Preferences'
@@ -72,9 +72,9 @@ class Preferences(QDialog):
         self.sections_selector.currentRowChanged.connect(self._select_section)
         self.butt_cancel.clicked.connect(self.close_widget)
         self.butt_save.clicked.connect(self.save_preferences)
-        self.preferences_updated.connect(self.flush_preferences)
+        self.preferences_updated.connect(self.apply_changes)
 
-    def flush_preferences(self):
+    def apply_changes(self):
 
         # check which plugins were updated?
         # self.preferences_widget.preferences_changed.keys()
@@ -103,6 +103,10 @@ class Preferences(QDialog):
         '''
         self.sections_selector = QListWidget()
         for num, section in enumerate(self.sections):
+            # Create nice section name
+            first_letter = section[0]
+            section = section.replace(first_letter, first_letter.upper(), 1)
+            section = section.replace('_', ' ')
             self.sections_selector.insertItem(num, section)
 
     def _build_option_stack(self):
@@ -186,12 +190,15 @@ class Preferences(QDialog):
                     tmp_widget.editingFinished.connect(self._line_edit)
 
                 if option.split('/')[0] in self.sections:
-                    section_tmp, optio_tmp = option.split('/')
-                    self.stack_layout_dict[section_tmp].addRow(str(optio_tmp),
-                                                               tmp_widget)
-                else:
-                    self.stack_layout_dict[section].addRow(str(option),
-                                                           tmp_widget)
+                    _, option = option.split('/')
+
+                # Create nice option name
+                first_letter = option[0]
+                option = option.replace(first_letter,
+                                        first_letter.upper(), 1)
+                option = option.replace('_', ' ')
+                self.stack_layout_dict[section].addRow(str(option),
+                                                       tmp_widget)
 
                 # TODO future configuration of future selection from list
 
