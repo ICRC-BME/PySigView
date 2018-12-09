@@ -331,7 +331,7 @@ class MainWindow(QMainWindow):
         # Created in pos_visible_setup otherwise not working properly at start
 
         # Tools menu
-        preferences_action = create_action(self, '&Open preferences',
+        preferences_action = create_action(self, '&Preferences',
                                            icon=None,
                                            tip=('&Open preferences'
                                                 ' for pysigview'),
