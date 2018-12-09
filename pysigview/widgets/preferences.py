@@ -38,9 +38,9 @@ class Preferences(QDialog):
         layout.setSpacing(10)
 
         # Buttons Widgets
-        self.butt_load = QPushButton('Load Preferences')
-        self.butt_save = QPushButton('Save&Update Preferences')
         self.butt_cancel = QPushButton('Cancel')
+        self.butt_apply = QPushButton('Apply')
+        self.butt_ok = QPushButton('OK')
 
         # Labels
         self.sections_label = QLabel('Preferences sections:')
@@ -54,11 +54,11 @@ class Preferences(QDialog):
         self._build_option_stack()
 
         # preferences grid layout setup
-        layout.addWidget(self.butt_load, 9, 1, 1, 2,
+        layout.addWidget(self.butt_cancel, 9, 1, 1, 2,
                          alignment=Qt.AlignBottom)
-        layout.addWidget(self.butt_save, 9, 4, 1, 2,
+        layout.addWidget(self.butt_apply, 9, 4, 1, 2,
                          alignment=Qt.AlignBottom)
-        layout.addWidget(self.butt_cancel, 9, 6, 1, 2,
+        layout.addWidget(self.butt_ok, 9, 6, 1, 2,
                          alignment=Qt.AlignBottom)
         layout.addWidget(self.sections_label, 0, 2, 1, 1)
         layout.addWidget(self.options_label, 0, 5, 1, 1)
@@ -71,7 +71,9 @@ class Preferences(QDialog):
         # Connect main layout signals
         self.sections_selector.currentRowChanged.connect(self._select_section)
         self.butt_cancel.clicked.connect(self.close_widget)
-        self.butt_save.clicked.connect(self.save_preferences)
+        self.butt_apply.clicked.connect(self.apply_preferences)
+        self.butt_ok.clicked.connect(self.apply_preferences)
+        self.butt_ok.clicked.connect(self.close_widget)
         self.preferences_updated.connect(self.apply_changes)
 
     def apply_changes(self):
@@ -267,7 +269,7 @@ class Preferences(QDialog):
         '''
         self.close()
 
-    def save_preferences(self):
+    def apply_preferences(self):
         '''
             save and update preferences
         :return:
@@ -278,14 +280,6 @@ class Preferences(QDialog):
                          self.preferences_changed[section][option])
 
         self.preferences_updated.emit()
-
-    def load_preferences(self):
-        '''
-            load different preferences ini file
-        :return:
-        '''
-        # TODO load different preference file
-        pass
 
 
 # helper Classes
