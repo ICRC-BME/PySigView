@@ -5,8 +5,7 @@
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtWidgets import (QListWidget, QStackedWidget, QCheckBox,
                              QWidget, QLineEdit, QGridLayout, QFormLayout,
-                             QLabel,  QPushButton,QHBoxLayout,
-                             )
+                             QLabel,  QPushButton, QHBoxLayout)
 from PyQt5.QtGui import QIntValidator
 
 # Local imports
@@ -53,9 +52,12 @@ class Preferences(QWidget):
         self._build_option_stack()
 
         # preferences grid layout setup
-        layout.addWidget(self.butt_load, 9, 1, 1, 2, alignment=Qt.AlignBottom)
-        layout.addWidget(self.butt_save, 9, 4, 1, 2, alignment=Qt.AlignBottom)
-        layout.addWidget(self.butt_cancel, 9, 6, 1, 2, alignment=Qt.AlignBottom)
+        layout.addWidget(self.butt_load, 9, 1, 1, 2,
+                         alignment=Qt.AlignBottom)
+        layout.addWidget(self.butt_save, 9, 4, 1, 2,
+                         alignment=Qt.AlignBottom)
+        layout.addWidget(self.butt_cancel, 9, 6, 1, 2,
+                         alignment=Qt.AlignBottom)
         layout.addWidget(self.sections_label, 0, 2, 1, 1)
         layout.addWidget(self.options_label, 0, 5, 1, 1)
         layout.addWidget(self.sections_selector, 1, 1, 4, 3)
@@ -98,11 +100,10 @@ class Preferences(QWidget):
         self.stack_layout_dict = {}
         self.options = {}
         # create stack with all editable sections
-        self.stack_layout_dict = {section: QFormLayout() for section in self.sections}
+        self.stack_layout_dict = {section: QFormLayout() for section
+                                  in self.sections}
 
         for section in self.sections:
-            #tmp = QWidget()
-            #tmp_layout = QFormLayout()
             options = CONF.options(section=section)
             if 'enable' in options:
                 options.remove('enable')
@@ -116,7 +117,10 @@ class Preferences(QWidget):
                 if isinstance(option_val, bool):
                     tmp_widget = QCheckBox('On/Off')
                     tmp_widget.setObjectName(name_reference)
-                    tmp_widget.setChecked(True) if option_val else tmp_widget.setChecked(False)
+                    if option_val:
+                        tmp_widget.setChecked(True)
+                    else:
+                        tmp_widget.setChecked(False)
                     tmp_widget.stateChanged.connect(self._boolean_state)
 
                 # one string or color setup
@@ -124,7 +128,8 @@ class Preferences(QWidget):
                     # TODO take care of hexa strings withou alpha channel
                     if (len(option_val) == 9) & (option_val.startswith('#')):
                         tmp_widget = QHBoxLayout()
-                        tmp_val = PreferenceLineedit(option_val, name_reference, 9)
+                        tmp_val = PreferenceLineedit(option_val,
+                                                     name_reference, 9)
                         tmp_col = ColorButton(hex2rgba(option_val))
                         tmp_col.setObjectName(name_reference)
                         tmp_col.color_changed.connect(self._color_change)
@@ -132,45 +137,53 @@ class Preferences(QWidget):
                         tmp_widget.addWidget(tmp_val)
                         tmp_widget.addWidget(tmp_col)
                     else:
-                        tmp_widget = PreferenceLineedit(option_val, name_reference, max_len=100)
+                        tmp_widget = PreferenceLineedit(option_val,
+                                                        name_reference,
+                                                        max_len=100)
                         tmp_widget.editingFinished.connect(self._line_edit)
 
                 # configuration of list (multiple selection)
-                if isinstance(option_val, tuple) | isinstance(option_val, list):
+                if (isinstance(option_val, tuple)
+                   | isinstance(option_val, list)):
                     tmp_widget = QHBoxLayout()
 
                     for i, val in enumerate(option_val):
                         name_loc = name_reference + '||{}'.format(i)
-                        validator = QIntValidator() if isinstance(val, int) else None
-                        tmp_val = PreferenceLineedit(str(val), name_loc, validator=validator)
+                        if isinstance(val, int):
+                            validator = QIntValidator()
+                        else:
+                            validator = None
+                        tmp_val = PreferenceLineedit(str(val),
+                                                     name_loc,
+                                                     validator=validator)
                         tmp_val.editingFinished.connect(self._line_edit_multi)
                         tmp_widget.addWidget(tmp_val)
 
-                    self.preferences_changed[section][option] = list(option_val)
+                    self.preferences_changed[section]
+                    [option] = list(option_val)
 
                 # configuration of single number
                 if isinstance(option_val, int) & ~isinstance(option_val, bool):
-                    tmp_widget = PreferenceLineedit(str(option_val), name_reference, max_len=4,
+                    tmp_widget = PreferenceLineedit(str(option_val),
+                                                    name_reference, max_len=4,
                                                     validator=QIntValidator())
                     tmp_widget.editingFinished.connect(self._line_edit)
 
                 if option.split('/')[0] in self.sections:
                     section_tmp, optio_tmp = option.split('/')
-                    self.stack_layout_dict[section_tmp].addRow(str(optio_tmp), tmp_widget)
+                    self.stack_layout_dict[section_tmp].addRow(str(optio_tmp),
+                                                               tmp_widget)
                 else:
-                    self.stack_layout_dict[section].addRow(str(option), tmp_widget)
+                    self.stack_layout_dict[section].addRow(str(option),
+                                                           tmp_widget)
 
                 # TODO future configuration of future selection from list
-
-            #tmp.setLayout(tmp_layout)
-            #self.stack_layout_dict[section] = tmp_layout
 
         # build whole stack
         for section in self.sections:
             tmp = QWidget()
             tmp.setLayout(self.stack_layout_dict[section])
             self.options_editor.addWidget(tmp)
-
 
     # ----- functions saving signal function changes ----
     def _color_change(self, color):
@@ -206,17 +219,21 @@ class Preferences(QWidget):
         pos_change = tmp_widget.objectName().split('||')
 
         if isinstance(tmp_widget.validator(), QIntValidator):
-            self.preferences_changed[pos_change[0]][pos_change[1]][int(pos_change[2])] = int(tmp_widget.text())
+            self.preferences_changed[pos_change[0]]
+            [pos_change[1]][int(pos_change[2])] = int(tmp_widget.text())
         else:
-            self.preferences_changed[pos_change[0]][pos_change[1]][int(pos_change[2])] = tmp_widget.text()
+            self.preferences_changed[pos_change[0]]
+            [pos_change[1]][int(pos_change[2])] = tmp_widget.text()
 
     def _line_edit(self):
         tmp_widget = self.sender()
         pos_change = tmp_widget.objectName().split('||')
         if isinstance(tmp_widget.validator(), QIntValidator):
-            self.preferences_changed[pos_change[0]][pos_change[1]] = int(tmp_widget.text())
+            self.preferences_changed[pos_change[0]]
+            [pos_change[1]] = int(tmp_widget.text())
         else:
-            self.preferences_changed[pos_change[0]][pos_change[1]] = tmp_widget.text()
+            self.preferences_changed[pos_change[0]]
+            [pos_change[1]] = tmp_widget.text()
 
     # ----- control button signals ------
 
@@ -234,11 +251,9 @@ class Preferences(QWidget):
         '''
         for section in self.preferences_changed.keys():
             for option in self.preferences_changed[section].keys():
-                CONF.set(section, option, self.preferences_changed[section][option])
-                # if isinstance(self.preferences_changed[section][option], list):
-                #     CONF.set(section, option, set(self.preferences_changed[section][option]))
-                # else:
-                #     CONF.set(section, option, self.preferences_changed[section][option])
+                CONF.set(section, option,
+                         self.preferences_changed[section][option])
+
         self.preferences_updated.emit()
 
     def load_preferences(self):
@@ -253,7 +268,8 @@ class Preferences(QWidget):
 # helper Classes
 class PreferenceLineedit(QLineEdit):
 
-    def __init__(self, value=None, name=None, max_len=None, validator=None, parent=None):
+    def __init__(self, value=None, name=None, max_len=None, validator=None,
+                 parent=None):
         super(PreferenceLineedit, self).__init__(parent=parent)
 
         if value is not None:
@@ -264,4 +280,3 @@ class PreferenceLineedit(QLineEdit):
             self.setMaxLength(max_len)
         if validator is not None:
             self.setValidator(validator)
-
