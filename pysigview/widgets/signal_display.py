@@ -1204,7 +1204,7 @@ class SignalDisplay(QWidget):
 
         return
 
-    def refresh_plugin(self):
+    def apply_settings(self):
 
         # update CONF attributes from init
         self.canvas.bgcolor = CONF.get(self.CONF_SECTION,'bgcolor')

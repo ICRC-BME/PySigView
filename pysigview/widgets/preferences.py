@@ -5,10 +5,13 @@
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtWidgets import (QListWidget, QStackedWidget, QCheckBox,
                              QWidget, QLineEdit, QGridLayout, QFormLayout,
-                             QLabel,  QPushButton, QHBoxLayout, QDialog)
+                             QPushButton, QHBoxLayout, QDialog)
 from PyQt5.QtGui import QIntValidator
 
 # Local imports
+from pysigview.core import source_manager as sm
+from pysigview.core.buffer_handler import MemoryBuffer
+
 from pysigview.utils.qthelpers import hex2rgba, rgba2hex
 from pysigview.config.main import CONF
 from pysigview.widgets.color_button import ColorButton
@@ -72,17 +75,39 @@ class Preferences(QDialog):
 
     def apply_changes(self):
 
-        # check which plugins were updated?
-        # self.preferences_widget.preferences_changed.keys()
+        # ----- Main -----
+        source_opened = sm.ODS.recording_info is not None
+        if len(self.preferences_changed['data_management']) and source_opened:
+            dm_prefs = self.preferences_changed['data_management']
+            
+            # TODO: navigation bar misbehaves
+            if 'use_memory_buffer' in dm_prefs:
+                if dm_prefs['use_memory_buffer'] is True:
+                    sm.PDS = MemoryBuffer(self.main)
+                    sm.PDS.state_changed.connect(self.main.navigation_bar.
+                                                 bar_widget.update_buffer_bar)
+                else:
+                    sm.PDS.terminate_buffer()
+                    sm.PDS.terminate_monitor_thread()
+                    sm.PDS = sm.ODS
+                    
+            elif isinstance(sm.PDS, MemoryBuffer):
+                sm.PDS.apply_settings()
+        
+        # ----- Signal display -----
+        if len(self.preferences_changed['signal_display']):
+            self.main.signal_display.apply_settings()
 
         # ------ Plugins -------
-        self.main.navigation_bar.refresh_plugin()
-        self.main.signal_display.refresh_plugin()
-        self.main.database.refresh_plugin()
-
-        # TODO update settings for memory buffer
-        # MemoryBuffer.refresh_plugin()
-
+        for plugin in self.main.plugin_list:
+            if plugin.CONF_SECTION not in self.preferences_changed.keys():
+                continue
+            if len(self.preferences_changed[plugin.CONF_SECTION]):
+                plugin.refresh_plugin()
+                
+        # In the end restart changed preferences
+        self.preferences_changed = {section: {} for section in self.sections}
+        
     # ----- create stacked widget functions ------
     def _select_section(self, sec):
         '''
@@ -175,8 +200,8 @@ class Preferences(QDialog):
                         tmp_val.editingFinished.connect(self._line_edit_multi)
                         tmp_widget.addWidget(tmp_val)
 
-                    self.preferences_changed[section]
-                    [option] = list(option_val)
+                    self.preferences_changed[section][option] = \
+                    list(option_val)
 
                 # configuration of single number
                 if isinstance(option_val, int) & ~isinstance(option_val, bool):

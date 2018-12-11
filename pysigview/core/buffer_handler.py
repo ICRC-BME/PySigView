@@ -354,7 +354,8 @@ class MemoryBuffer(BufferDataSource, QObject):
 
         self.current_view_dm = None
 
-        self.chunk_size = int(CONF.get('data_management', 'chunk_size')*1e6)
+        self.chunk_size = int(CONF.get('signal_display',
+                                       'init_time_scale')*1e6)
         self.N_chunks_before = CONF.get('data_management', 'n_chunks_before')
         self.N_chunks_after = CONF.get('data_management', 'n_chunks_after')
         self.N_chunks = self.N_chunks_before + self.N_chunks_after + 1
@@ -603,10 +604,10 @@ class MemoryBuffer(BufferDataSource, QObject):
 
         return data_out
 
-    def refresh_plugin(self):
+    def apply_settings(self):
 
-        self.chunk_size = int(CONF.get('data_management', 'chunk_size') * 1e6)
         self.N_chunks_before = CONF.get('data_management', 'n_chunks_before')
         self.N_chunks_after = CONF.get('data_management', 'n_chunks_after')
         self.N_chunks = self.N_chunks_before + self.N_chunks_after + 1
         self.use_disk = CONF.get('data_management', 'use_disk_buffer')
+        self.start_new_buffer()

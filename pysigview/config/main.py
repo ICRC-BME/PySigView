@@ -56,7 +56,6 @@ DEFAULTS = {'DEFAULTS': {'enable': True
                                 'use_disk_buffer': False,
                                 'n_chunks_before': 1,
                                 'n_chunks_after': 1,
-                                'chunk_size': 10
                                 },
             'signal_display': {'n_cols': 1,
                                'plot_method': 'gl',  # gl or agg
