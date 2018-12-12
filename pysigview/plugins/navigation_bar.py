@@ -530,8 +530,8 @@ class NavigationBar(BasePluginWidget):
         """Perform actions before parent main window is closed"""
         return True
 
-    def refresh_plugin(self):
-        """Refresh widget"""
+    def apply_plugin_settings(self):
+        """Apply configuration file's plugin settings."""
         # error no sel._starting_up atribute
         # if self._starting_up:
         #     self._starting_up = False
