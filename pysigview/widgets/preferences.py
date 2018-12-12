@@ -79,21 +79,30 @@ class Preferences(QDialog):
         source_opened = sm.ODS.recording_info is not None
         if len(self.preferences_changed['data_management']) and source_opened:
             dm_prefs = self.preferences_changed['data_management']
-            
-            # TODO: navigation bar misbehaves
+
+            # TODO: do not address navigation bar directly
             if 'use_memory_buffer' in dm_prefs:
                 if dm_prefs['use_memory_buffer'] is True:
                     sm.PDS = MemoryBuffer(self.main)
                     sm.PDS.state_changed.connect(self.main.navigation_bar.
                                                  bar_widget.update_buffer_bar)
+                    sm.PDS.apply_settings()
                 else:
+                    sm.PDS.state_changed.disconnect()
                     sm.PDS.terminate_buffer()
                     sm.PDS.terminate_monitor_thread()
+                    sm.PDS.purge_data()
+                    self.main.signal_display.data_map_changed. \
+                        disconnect(sm.PDS.update)
+                    # TODO: create reset data for navigation bar bars
+                    self.main.navigation_bar.bar_widget.buffer_bar. \
+                        set_data([0, 0])
+                    self.main.navigation_bar.bar_widget.buffer_bar.update()
                     sm.PDS = sm.ODS
-                    
+
             elif isinstance(sm.PDS, MemoryBuffer):
                 sm.PDS.apply_settings()
-        
+
         # ----- Signal display -----
         if len(self.preferences_changed['signal_display']):
             self.main.signal_display.apply_settings()
@@ -104,10 +113,10 @@ class Preferences(QDialog):
                 continue
             if len(self.preferences_changed[plugin.CONF_SECTION]):
                 plugin.refresh_plugin()
-                
+
         # In the end restart changed preferences
         self.preferences_changed = {section: {} for section in self.sections}
-        
+
     # ----- create stacked widget functions ------
     def _select_section(self, sec):
         '''
@@ -201,7 +210,7 @@ class Preferences(QDialog):
                         tmp_widget.addWidget(tmp_val)
 
                     self.preferences_changed[section][option] = \
-                    list(option_val)
+                        list(option_val)
 
                 # configuration of single number
                 if isinstance(option_val, int) & ~isinstance(option_val, bool):
@@ -220,8 +229,6 @@ class Preferences(QDialog):
                 option = option.replace('_', ' ')
                 self.stack_layout_dict[section].addRow(str(option),
                                                        tmp_widget)
-
-                # TODO future configuration of future selection from list
 
         # build whole stack
         for section in self.sections:
