@@ -100,7 +100,7 @@ CONF_VERSION = '0.4.0'
 
 # Main configuration instance
 try:
-    CONF = UserConfig('pysigview', defaults=DEFAULTS, load=False,
+    CONF = UserConfig('pysigview', defaults=DEFAULTS, load=True,
                       version=CONF_VERSION, subfolder=SUBFOLDER, backup=True,
                       raw_mode=True)
 except Exception:
