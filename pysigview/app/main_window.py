@@ -63,7 +63,7 @@ from pysigview.config.utils import get_image_path, get_home_dir
 # from pysigview.config.system import SYS_INFO
 from pysigview.utils.qthelpers import add_actions, create_action
 from pysigview.widgets.dir_tree_dialog import DirTreeDialog
-
+from pysigview.widgets.preferences import Preferences
 # =============================================================================
 # Get configuration
 # =============================================================================
@@ -213,6 +213,9 @@ class MainWindow(QMainWindow):
         # Plugin menu
         self.plugins_menu = self.menuBar().addMenu('&Plugins')
 
+        # Tools menu
+        self.tools_menu = self.menuBar().addMenu('&Tools')
+
         # Help menu
         self.help_menu = self.menuBar().addMenu('&Help')
 
@@ -226,6 +229,7 @@ class MainWindow(QMainWindow):
         # ----- Load configuration file
 
         # TODO: this will contain key_map, parameters
+        # FIXME: for now config widget is in File_Menu
 
         # ----- Main widget
         self.set_splash("Setting up canvas ...")
@@ -332,8 +336,13 @@ class MainWindow(QMainWindow):
         # Created in pos_visible_setup otherwise not working properly at start
 
         # Tools menu
-        # Preferences...what else?
-#        preferences
+        preferences_action = create_action(self, '&Preferences',
+                                           icon=None,
+                                           tip=('&Open preferences'
+                                                ' for pysigview'),
+                                           triggered=self.open_preferences,
+                                           context=Qt.ApplicationShortcut)
+        self.tools_menu_actions = [preferences_action]
 
         # Help menu
         report_bug_action = create_action(self, '&Report bug',
@@ -351,6 +360,7 @@ class MainWindow(QMainWindow):
 
         # Filling menu / toolbar entries
         add_actions(self.file_menu, self.file_menu_actions)
+        add_actions(self.tools_menu, self.tools_menu_actions)
         add_actions(self.help_menu, self.help_menu_actions)
 
         # Window set-up
@@ -729,6 +739,11 @@ class MainWindow(QMainWindow):
 
         return
 
+    # ----- Tools menu actions
+
+    def open_preferences(self):
+        self.preferences_widget = Preferences(self)
+
     # ----- Help menu actions
 
     def report_bug(self):
@@ -967,8 +982,6 @@ class MainWindow(QMainWindow):
             self.fullscreen_flag = True
             self.showFullScreen()
         self.__update_fullscreen_action()
-
-    # ----- Preferences
 
     # ----- Shortcuts
 

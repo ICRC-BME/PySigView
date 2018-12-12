@@ -161,7 +161,6 @@ class BarWidget(QWidget):
 
     # TODO: universal bar function with assigned data_map and create bar class
     def update_buffer_bar(self):
-
         if not self.main.source_opened:
             return
 
@@ -546,7 +545,26 @@ class NavigationBar(BasePluginWidget):
         """Perform actions before parent main window is closed"""
         return True
 
-    def refresh_plugin(self):
-        """Refresh widget"""
-        if self._starting_up:
-            self._starting_up = False
+    def apply_plugin_settings(self):
+        """Apply configuration file's plugin settings."""
+        # error no sel._starting_up atribute
+        # if self._starting_up:
+        #     self._starting_up = False
+
+        # update colors from init
+        self.bar_widget.canvas.bgcolor = CONF.get(self.parent().CONF_SECTION,
+                                                  'bgcolor')
+        self.bar_widget.buffer_rgba = hex2rgba(CONF.get(
+                self.parent().CONF_SECTION,
+                'buffer_bar_color'))
+        self.bar_widget.buffer_carray = np.array([self.buffer_rgba,
+                                                  self.buffer_rgba])
+        self.bar_widget.view_rgba = hex2rgba(CONF.get(
+                self.parent().CONF_SECTION,
+                'view_bar_color'))
+        self.bar_widget.view_carray = np.array([self.view_rgba,
+                                                self.view_rgba])
+
+        # update disc thresh
+        self.bar_widget.discont_thresh = CONF.get(self.parent().CONF_SECTION,
+                                                  'discontinuity_limit')

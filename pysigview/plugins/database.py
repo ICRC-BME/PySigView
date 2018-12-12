@@ -189,7 +189,10 @@ class Database(BasePluginWidget):
         """Perform actions before parent main window is closed"""
         return True
 
-    def refresh_plugin(self):
-        """Refresh widget"""
-        if self._starting_up:
-            self._starting_up = False
+    def apply_plugin_settings(self):
+        """Apply configuration file's plugin settings."""
+        # if self._starting_up:
+        #     self._starting_up = False
+        self.host_le.setText(str(CONF.get(self.CONF_SECTION, 'host')))
+        self.port_le.setText(str(CONF.get(self.CONF_SECTION, 'port')))
+        self.user_le.setText(str(CONF.get(self.CONF_SECTION, 'username')))

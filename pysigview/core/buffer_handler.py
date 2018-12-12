@@ -176,7 +176,6 @@ def fill_roll_buffer(sd, stop_event, proc_lock,
     load_ss = load_dm.get_active_largest_ss()
 
     while True:
-
         if stop_event.is_set():
             return
 
@@ -338,9 +337,10 @@ class MemoryBuffer(BufferDataSource, QObject):
 
     def __init__(self, parent):
         super(MemoryBuffer, self).__init__()
-        QObject.__init__(self)
+        QObject.__init__(self, parent)
 
-        parent.signal_display.data_map_changed.connect(self.update)
+        self.signal_display = self.parent().signal_display
+        self.signal_display.data_map_changed.connect(self.update)
 
         self.rec_start = sm.ODS.recording_info['recording_start']
         self.rec_end = sm.ODS.recording_info['recording_end']
@@ -351,10 +351,14 @@ class MemoryBuffer(BufferDataSource, QObject):
         self.data_map.setup_data_map(sm.ODS.data_map._map)
         self.data_map.reset_data_map()
         self.data_map['uutc_ss'][:] = self.rec_start
+        if len(self.signal_display.data_map):
+            self.data_map['ch_set'] = self.signal_display.data_map['ch_set']
 
-        self.current_view_dm = None
+        self.current_view_dm = self.parent().signal_display.data_map
+        self.curr_view_times = self.current_view_dm.get_active_largest_ss()
 
-        self.chunk_size = int(CONF.get('data_management', 'chunk_size')*1e6)
+        self.chunk_size = int(CONF.get('signal_display',
+                                       'init_time_scale')*1e6)
         self.N_chunks_before = CONF.get('data_management', 'n_chunks_before')
         self.N_chunks_after = CONF.get('data_management', 'n_chunks_after')
         self.N_chunks = self.N_chunks_before + self.N_chunks_after + 1
@@ -362,16 +366,12 @@ class MemoryBuffer(BufferDataSource, QObject):
 
         # ----- Buffer process -----
 
-        if self.use_disk:
-            self.datadir = gettempdir()
-        else:
-            self.datadir = None
-
         self.buffer_manager = SharedDataManager()
         self.buffer_manager.start()
         self.sd = self.buffer_manager.SharedData()
         self.sd.set_chunk_size(self.chunk_size)
         self.sd.set_data_map(self.data_map)
+        self.sd.set_current_view_dm(self.current_view_dm)
 
         self.buffer_stop = None
         self.buffer_process = None
@@ -450,6 +450,11 @@ class MemoryBuffer(BufferDataSource, QObject):
 
         sizes = (np.ones(n_elem)*fsamps*np.diff(uutc_ss)/1e6).astype('int64')
         sizes[~self.data_map['ch_set']] = 0
+
+        if self.use_disk:
+            self.datadir = gettempdir()
+        else:
+            self.datadir = None
 
         srb = PysigviewMultiRingBuffer(n_elem, sizes, float, uutc_ss,
                                        fsamps, self.datadir)
@@ -599,3 +604,11 @@ class MemoryBuffer(BufferDataSource, QObject):
                                                       obj_uutc_ss)
 
         return data_out
+
+    def apply_settings(self):
+
+        self.N_chunks_before = CONF.get('data_management', 'n_chunks_before')
+        self.N_chunks_after = CONF.get('data_management', 'n_chunks_after')
+        self.N_chunks = self.N_chunks_before + self.N_chunks_after + 1
+        self.use_disk = CONF.get('data_management', 'use_disk_buffer')
+        self.start_new_buffer()

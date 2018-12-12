@@ -1426,3 +1426,11 @@ class SignalDisplay(QWidget):
                                                           [0.2]]))
 
         return
+
+    def apply_settings(self):
+
+        # update CONF attributes from init
+        self.canvas.bgcolor = CONF.get(self.CONF_SECTION,'bgcolor')
+        self.color_palette = CONF.get(self.CONF_SECTION, 'color_palette')
+
+
