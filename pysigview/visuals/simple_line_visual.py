@@ -85,8 +85,6 @@ class SimpleLineVisual(visuals.Visual):
 
         self.set_gl_state('translucent')
 
-        GL.glEnable(GL.GL_LINE_SMOOTH)
-
         self._pos_vbo = gloo.VertexBuffer()
         self._color_vbo = gloo.VertexBuffer()
         self._index_buffer = gloo.IndexBuffer()

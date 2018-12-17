@@ -183,7 +183,6 @@ class MultilineVisual(visuals.Visual):
         self._bounds = None
 
         self.set_gl_state('translucent', line_width=self._width)
-        GL.glEnable(GL.GL_LINE_SMOOTH)
 
         # Construct LUT lookup and color array
 
