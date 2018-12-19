@@ -417,10 +417,10 @@ class MainWindow(QMainWindow):
             self.file_path = path
         else:
             diag_title = 'Select file'
-            diag_path = str(load_dialog.getExistingDirectory(self,
-                                                             diag_title,
-                                                             get_home_dir()))
-            self.file_path = diag_path
+            diag_path = load_dialog.getOpenFileName(self,
+                                                    diag_title,
+                                                    get_home_dir())
+            self.file_path = diag_path[0]
 
         if self.file_path:
             self.open_data_source(self.file_path)
