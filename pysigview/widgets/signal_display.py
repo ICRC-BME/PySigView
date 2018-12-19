@@ -820,7 +820,7 @@ class SignalDisplay(QWidget):
         if event.source() is None:  # Dropped from outside of Qt app
             event.accept()
             url = event.mimeData().urls()[0]
-            self.main.open_data_source(url.path())
+            self.main.open_data_source(url.toLocalFile())
         elif event.source() == self.hidden_channels:  # Hidden channel list
             event.accept()
             self.visible_channels.insert_items([x.text() for x

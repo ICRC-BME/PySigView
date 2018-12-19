@@ -80,8 +80,7 @@ class AnnotationList(QTreeWidget):
         if e.source() is None:  # Dropped from outside of Qt app
             e.accept()
             url = e.mimeData().urls()[0]
-            # TODO - determine the type of the item dropped - file ot session
-            self.parent().open_file(url.path())
+            self.parent().open_file(url.toLocalFile())
         else:
             e.ignore()
 
