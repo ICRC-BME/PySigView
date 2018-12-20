@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/ICRC-BME/PySigView.svg?branch=master)](https://travis-ci.com/ICRC-BME/PySigView)
+
 PySigView: Python signal viewer
 ====================================================
 
