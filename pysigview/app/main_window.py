@@ -42,7 +42,8 @@ import webbrowser
 # =============================================================================
 # PyQt imports
 # =============================================================================
-from PyQt5.QtCore import Qt, pyqtSignal, QThread, QSize, QPoint, QByteArray
+from PyQt5.QtCore import (Qt, pyqtSignal, QThread, QSize, QPoint, QByteArray,
+                          QLocale)
 from PyQt5.QtGui import QColor, QIcon, QPixmap
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QMessageBox,
                              QSplashScreen, QFileDialog, QInputDialog,
@@ -75,6 +76,7 @@ from pysigview.config.main import CONF
 MAIN_APP = QApplication(sys.argv)
 APP_ICON = QIcon(get_image_path("pysigview.svg"))
 MAIN_APP.setWindowIcon(APP_ICON)
+QLocale.setDefault(QLocale(QLocale.C))
 
 # =============================================================================
 # Createspash screen

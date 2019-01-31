@@ -291,6 +291,9 @@ class ToolsWidget(QWidget):
         # Edit field for span
         self.span_le = QLineEdit(self)
         self.span_validator = QDoubleValidator(self)
+        self.span_validator.setBottom(0.001)
+        self.span_validator.setDecimals(3)
+        self.span_le.setValidator(self.span_validator)
         self.span_le.returnPressed.connect(self.set_span)
 
         # Switcher between samples, uutc and rec time
