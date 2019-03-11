@@ -22,8 +22,7 @@ United States
 import numpy as np
 import pandas as pd
 
-from pymef import read_ts_channels_uutc, get_toc, check_password
-from pymef import pymef3_file
+from pymef.mef_session import MefSession
 
 # Local imports
 from ..source_manager import FileDataSource
@@ -36,34 +35,34 @@ class mefdHandler(FileDataSource):
         self.name = 'Mef session'
         self.extension = '.mefd'
 
-        self.session_md = None
+        self.session = None
 
     def password_check(self, password):
 
         try:
-            check_password(self._path, password)
+            if self.session is None:
+                self.session = MefSession(self._path, password, False)
             return True
         except RuntimeError as e:
             return False
 
     def load_metadata(self):
 
-        if self.session_md is None:
-            self.session_md = pymef3_file.read_mef_session_metadata(
-                    self._path,
-                    self._password,
-                    False)
+        if self.session is None or self.session.session_md is None:
+            self.session = MefSession(self._path, self._password)
 
         # Get information about the recording
-        spec_md = self.session_md['session_specific_metadata']
-        ts_md = self.session_md['time_series_metadata']['section_2']
-        channel_list = list(self.session_md['time_series_channels'].keys())
-        channel_list.sort()
 
+        s_md = self.session.session_md['session_specific_metadata']
+        ts_md = self.session.session_md['time_series_metadata']['section_2']
+        ts_ch = self.session.session_md['time_series_channels']
+        channel_list = list(ts_ch.keys())
+        channel_list.sort()
         self.recording_info = {}
-        self.recording_info['recording_start'] = spec_md['earliest_start_time']
-        self.recording_info['recording_end'] = spec_md['latest_end_time']
-        self.recording_info['recording_duration'] = ts_md['recording_duration']
+        self.recording_info['recording_start'] = s_md['earliest_start_time'][0]
+        self.recording_info['recording_end'] = s_md['latest_end_time'][0]
+        self.recording_info['recording_duration'] = (
+                ts_md['recording_duration'][0])
         self.recording_info['extension'] = '.mefd'
         self.recording_info['nchan'] = len(channel_list)
 
@@ -78,17 +77,18 @@ class mefdHandler(FileDataSource):
                                ('uutc_ss', np.int64, 2)])
 
         for i, channel in enumerate(channel_list):
-            channel_md = self.session_md['time_series_channels'][channel]
-            fsamp = channel_md['section_2']['sampling_frequency']
-            nsamp = channel_md['section_2']['number_of_samples']
-            ufact = channel_md['section_2']['units_conversion_factor']
-            unit = channel_md['section_2']['units_description']
+            channel_md = ts_ch[channel]
+            fsamp = channel_md['section_2']['sampling_frequency'][0]
+            nsamp = channel_md['section_2']['number_of_samples'][0]
+            ufact = channel_md['section_2']['units_conversion_factor'][0]
+            unit = channel_md['section_2']['units_description'][0]
+            unit = unit.decode("utf-8")
 
             channel_spec_md = channel_md['channel_specific_metadata']
-            start_time = channel_spec_md['earliest_start_time']
-            end_time = channel_spec_md['latest_end_time']
+            start_time = channel_spec_md['earliest_start_time'][0]
+            end_time = channel_spec_md['latest_end_time'][0]
 
-            toc = get_toc(channel_md)
+            toc = self.session.get_channel_toc(channel)
             disc_stops = toc[3, toc[0] == 1]
             disc_starts = disc_stops - toc[1, toc[0] == 1]
             disconts = np.c_[disc_starts, disc_stops]
@@ -106,26 +106,31 @@ class mefdHandler(FileDataSource):
         # Basic annotation columns
         basic_cols = ['start_time', 'end_time', 'channel']
 
-        # Ignored params
-        ignored_params = ['type_string', 'version_minor', 'version_major',
-                          'bytes', 'encryption', 'record_CRC']
-
         dfs_out = {}
 
         for entry in records_list:
-            if entry['type_string'] not in dfs_out:
-                ann_cols = list(entry['record_body'].keys()
-                                - ignored_params)
+            rec_header = entry['record_header']
+            rec_body = entry['record_body']
+            rec_type = rec_header['type_string'][0]
+            rec_type = rec_type.decode("utf-8")
+            if rec_type not in dfs_out:
+                ann_cols = [x[0] for x in rec_body.dtype.descr]
                 cols = basic_cols + ann_cols
-                dfs_out[entry['type_string']] = pd.DataFrame(columns=cols)
+                dfs_out[rec_type] = pd.DataFrame(columns=cols)
 
-            df = dfs_out[entry['type_string']]
+            df = dfs_out[rec_type]
             ei = len(df)
-            col_vals = {'start_time': entry['time'],
+            col_vals = {'start_time': rec_header['time'][0],
                         'end_time': np.nan,
                         'channel': np.nan}
-            col_vals.update(dict([i for i in entry['record_body'].items()
-                                  if i[0] not in ignored_params]))
+            col_vals.update(
+                    dict([(x[0], rec_body[x[0]][0])
+                          for x in rec_body.dtype.descr]))
+            # Convert byte strings to normal strings
+            for key, val in col_vals.items():
+                if type(val) == np.bytes_:
+                    col_vals[key] = (val.decode("utf-8"))
+
             df.loc[ei] = col_vals
 
         return dfs_out
@@ -137,22 +142,19 @@ class mefdHandler(FileDataSource):
         Annotations - in form of pandas DataFrame(s)
         """
 
-        if self.session_md is None:
-            self.session_md = pymef3_file.read_mef_session_metadata(
-                    self._path,
-                    self._password,
-                    False)
+        if self.session is None or self.session.session_md is None:
+            self.session = MefSession(self._path, self._password)
 
         dfs_out = {}
-
+        session_md = self.session.session_md
         # Get session level records
-        if 'records_info' in self.session_md.keys():
-            session_records = self.session_md['records_info']['records']
+        if 'records_info' in session_md.keys():
+            session_records = session_md['records_info']['records']
 
             dfs_out.update(self._process_mef_records(session_records))
 
         # Get channel level records
-        for _, channel_d in self.session_md['time_series_channels'].items():
+        for _, channel_d in session_md['time_series_channels'].items():
             if 'records_info' in channel_d.keys():
                 ch_rec_list = channel_d['records_info']['records']
             else:
@@ -181,8 +183,7 @@ class mefdHandler(FileDataSource):
         channel_map = data_map.get_active_channels()
         uutc_map = data_map.get_active_uutc_ss()
 
-        data = read_ts_channels_uutc(self._path, self._password,
-                                     channel_map, uutc_map)
+        data = self.session.read_ts_channels_uutc(channel_map, uutc_map)
 
         data_out = np.empty(len(data_map), object)
         for i in range(len(data_map)):
