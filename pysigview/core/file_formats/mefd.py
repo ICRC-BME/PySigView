@@ -41,7 +41,8 @@ class mefdHandler(FileDataSource):
 
         try:
             if self.session is None:
-                self.session = MefSession(self._path, password, False)
+                self.session = MefSession(self._path, password, False,
+                                          check_all_passwords=False)
             return True
         except RuntimeError as e:
             return False
@@ -49,7 +50,8 @@ class mefdHandler(FileDataSource):
     def load_metadata(self):
 
         if self.session is None or self.session.session_md is None:
-            self.session = MefSession(self._path, self._password)
+            self.session = MefSession(self._path, self._password,
+                                      check_all_passwords=False)
 
         # Get information about the recording
 
