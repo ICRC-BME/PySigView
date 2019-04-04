@@ -79,7 +79,8 @@ class SignalWidget(QWidget):
                                        axis_font_size=12,
                                        tick_label_margin=5,
                                        axis_color=axis_color,
-                                       tick_color=axis_color)
+                                       tick_color=axis_color,
+                                       text_color=axis_color)
         self.signal_yaxis.width_max = 60
         self.view_grid.add_widget(self.signal_yaxis, row=0, col=0, row_span=2)
 
@@ -88,7 +89,8 @@ class SignalWidget(QWidget):
                                              axis_font_size=12,
                                              tick_label_margin=5,
                                              axis_color=axis_color,
-                                             tick_color=axis_color)
+                                             tick_color=axis_color,
+                                             text_color=axis_color)
 
         self.signal_xaxis.height_max = 55
         self.view_grid.add_widget(self.signal_xaxis, row=2, col=1)
@@ -104,14 +106,20 @@ class SignalWidget(QWidget):
         self.spectrum_yaxis = AxisWidget(orientation='left',
                                          axis_label='Amplitude',
                                          axis_font_size=12,
-                                         tick_label_margin=5)
+                                         tick_label_margin=5,
+                                         axis_color=axis_color,
+                                         tick_color=axis_color,
+                                         text_color=axis_color)
         self.spectrum_yaxis.width_max = 60
         self.view_grid.add_widget(self.spectrum_yaxis, row=3, col=0,
                                   row_span=2)
 
         self.spectrum_xaxis = scene.AxisWidget(orientation='bottom',
                                                axis_label='Frequency [Hz]',
-                                               axis_font_size=12)
+                                               axis_font_size=12,
+                                               axis_color=axis_color,
+                                               tick_color=axis_color,
+                                               text_color=axis_color)
 
         self.spectrum_xaxis.height_max = 55
         self.view_grid.add_widget(self.spectrum_xaxis, row=5, col=1)

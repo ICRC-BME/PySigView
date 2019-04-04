@@ -165,21 +165,24 @@ class SignalDisplay(QWidget):
                           axis_width=1, tick_width=1,
                           anchors=('center', 'top'),
                           axis_color=m_color,
-                          tick_color=m_color)
+                          tick_color=m_color,
+                          text_color=m_color)
         self.x_tick_spacing = 1000
         self.yaxis = Axis(parent=self.signal_view.scene,
                           tick_direction=(1., 0.),
                           axis_width=1, tick_width=1,
                           anchors=('left', 'center'),
                           axis_color=m_color,
-                          tick_color=m_color)
+                          tick_color=m_color,
+                          text_color=m_color)
         self.y_tick_spacing = 100
         self.measure_line = Line(parent=self.signal_view.scene,
                                  width=3, color=m_color)
         # TODO - textbox
         self.describe_text = MulticolorText(anchor_x='left',
                                             anchor_y='bottom',
-                                            parent=self.signal_view.scene)
+                                            parent=self.signal_view.scene,
+                                            color=m_color)
 
         # Signal highlighting
         self.highlight_rec = Mesh(parent=self.signal_view.scene,
