@@ -764,20 +764,20 @@ class SignalDisplay(QWidget):
             ch_names = [x.orig_channel for x in pcs]
             g_names = []
             for ch_name in ch_names:
-                g_name = ''.join([i for i in ch_name if not i.isdigit()])
-                g_names.append(g_name)
+                stub = ''.join([i for i in ch_name if not i.isdigit()])
+                g_names.append(stub)
             g_names = list(set(g_names))
 
             # TODO - in prefs, color.get_colormaps()
             cm = color.get_colormap(self.color_palette)
             colors = cm[np.linspace(0, 1, len(g_names))]
 
-            for g_name, c in zip(g_names, colors):
-                g_pcs = [x for x in pcs
-                         if x.orig_channel[:len(g_name)] == g_name]
-                for pc in g_pcs:
-                    pc.line_color = c.rgba[0]
-                    pc.container.item_widget.color_select.set_color(c.rgba[0])
+            for pc in pcs:
+                stub = ''.join([i for i in pc.orig_channel if not i.isdigit()])
+                c = colors[g_names.index(stub)]
+                pc.line_color = c.rgba[0]
+                pc.container.item_widget.color_select.set_color(c.rgba[0])
+
             self.update_labels()
 
         elif self.color_coding_mode == 3:
