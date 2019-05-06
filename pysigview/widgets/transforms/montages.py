@@ -48,10 +48,10 @@ class MontageTransform(BasePlotTransform):
     @property
     def transform_variables(self):
         return (self.second_channel, self.second_channel_pos)
-    
+
     @transform_variables.setter
     def transforms_variables(self, second_channel, second_channel_pos):
-        self.second_channel= second_channel
+        self.second_channel = second_channel
         self.second_channel_pos = second_channel_pos
 
 

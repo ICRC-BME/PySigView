@@ -47,7 +47,7 @@ class FilterTransform(BasePlotTransform):
     @property
     def transform_variables(self):
         return (self.a, self.b)
-    
+
     @transform_variables.setter
     def transforms_variables(self, a, b):
         self.a = a

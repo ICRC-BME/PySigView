@@ -45,7 +45,7 @@ class EnvelopeTransform(BasePlotTransform):
     @property
     def transform_variables(self):
         return self.pow
-    
+
     @transform_variables.setter
     def transforms_variables(self, pow):
         self.pow = pow

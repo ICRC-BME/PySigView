@@ -19,7 +19,6 @@ United States
 """
 
 # Standard library imports
-import copy
 
 # Third party imports
 import numpy as np
@@ -112,7 +111,7 @@ class TransformChainView(QTreeWidget):
                     cont_trans_item = TransformChainItem(self, di)
                     cont_trans_item.setText(0, di.pvc.name)
                     for i, trans in enumerate(di.pvc.transform_chain):
-                            cont_trans_item.setText(i+1, trans.name)
+                        cont_trans_item.setText(i+1, trans.name)
                     self.addTopLevelItem(cont_trans_item)
                 else:
                     pass
