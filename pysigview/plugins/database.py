@@ -79,6 +79,7 @@ class Database(BasePluginWidget):
         passwd_label = QLabel('Password:')
         self.passwd_le = QLineEdit()
         self.passwd_le.setEchoMode(QLineEdit.EchoMode(2))
+        self.passwd_le.returnPressed.connect(self.create_connection)
         self.win_layout.addRow(passwd_label, self.passwd_le)
 
         self.connect_btn = QPushButton('Connect')
