@@ -985,6 +985,8 @@ class SignalDisplay(QWidget):
                     uutc_ss.append(pc.uutc_ss)
 
         self.data_map.reset_data_map()
+        if len(channels) == 0:
+            return
         self.data_map.set_channel(np.array(channels),
                                   np.array(uutc_ss))
 
@@ -1149,6 +1151,9 @@ class SignalDisplay(QWidget):
             while not sm.PDS.is_available(self.data_map):
                 sleep(0.1)
                 continue
+
+        if len(self.data_map.get_active_channels()) == 0:
+            return
 
         self.data_array = sm.PDS.get_data(self.data_map)
 
