@@ -31,37 +31,28 @@ from pysigview.core import source_manager as sm
 
 class MontageTransform(BasePlotTransform):
 
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self):
+        super().__init__()
 
+        self.name = 'montage'
         self.second_channel = None
         self.second_channel_pos = None
 
     def apply_transform(self, data):
+        return data[0] - data[1]
 
-        # We are likely in preview mode in that case load the data directly
-        if data.ndim == 1:
-            sd = self.parent.main.signal_display
-            second_cd_data = sd.data_array[self.second_channel_pos]
-            print('Second data is', second_cd_data)
-            if type(second_cd_data) == float:
-                # We have to load the data here!
-                dm = sm.DataMap()
-                dm.setup_data_map(sd.data_map._map)
-                dm.reset_data_map()
-                dm.set_channel(self.second_channel,
-                               self.visual_container.uutc_ss)
-                second_cd_data = sm.PDS.get_data(dm)[self.second_channel_pos]
-                print('Second data is', second_cd_data)
+    def modify_visual_container(self, vc):
+        vc.add_channels.append(self.second_channel)
+        vc.data_array_pos.append(self.second_channel_pos)
 
-            return data - second_cd_data
-        else:
-            return data[0] - data[1]
-
-    # Reimplement from the base transform
-    def modify_visual_container(self):
-        self._vc.add_channels.append(self.second_channel)
-        self._vc.data_array_pos.append(self.second_channel_pos)
+    @property
+    def transform_variables(self):
+        return (self.second_channel, self.second_channel_pos)
+    
+    @transform_variables.setter
+    def transforms_variables(self, second_channel, second_channel_pos):
+        self.second_channel= second_channel
+        self.second_channel_pos = second_channel_pos
 
 
 class Montages(QWidget):
@@ -146,11 +137,12 @@ class Montages(QWidget):
         selected_channel = self.channel_selector.currentText()
 
         # Greate the transform object
-        transform = MontageTransform(self)
+        transform = MontageTransform()
         transform.second_channel = self.second_channel
         transform.second_channel_pos = self.second_channel_pos
         transform.name = '-'+selected_channel
-        transform._vc = vc
+        vc.add_channels.append(selected_channel)
+        vc.data_array_pos.append(self.second_channel_pos)
 
         return transform
 

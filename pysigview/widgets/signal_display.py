@@ -957,7 +957,6 @@ class SignalDisplay(QWidget):
         self.data_map.reset_data_map()
 
     # TODO: what if there are two channels with the same orig_channels
-    # TODO: what if one container has more org_channels (i.e. montage)
     def update_data_map_channels(self):
         """
         Updates data_map from visible_channels pane and reloads the data.
@@ -970,21 +969,18 @@ class SignalDisplay(QWidget):
         uutc_ss = []
         for pc in pcs:
             pc_chans = [pc.orig_channel] + pc.add_channels
-            # Check if channel is already in the list
-            # !!! TODO - TEMP see the todo above function for montage channels
-            if any([True for x in pc_chans if x in channels]):
 
-                for o_ch in [x for x in pc_chans if x in channels]:
-                    if o_ch in channels:
-                        ch_idx = channels.index(o_ch)
-                        if np.diff(uutc_ss[ch_idx]) < np.diff(pc.uutc_ss):
-                            uutc_ss[ch_idx] = pc.uutc_ss
-                    else:
-                        channels.append(o_ch)
-                        uutc_ss.append(pc.uutc_ss)
+            # Get the channels in the current plot container
+            for o_ch in pc_chans:
 
-            else:
-                for o_ch in pc_chans:
+                # Check if the channel is already in the list
+                if o_ch in channels:
+                    ch_idx = channels.index(o_ch)
+                    if pc.uutc_ss[0] < uutc_ss[ch_idx][0]:
+                        uutc_ss[ch_idx][0] = pc.uutc_ss[0]
+                    if pc.uutc_ss[1] > uutc_ss[ch_idx][1]:
+                        uutc_ss[ch_idx][1] = pc.uutc_ss[1]
+                else:
                     channels.append(o_ch)
                     uutc_ss.append(pc.uutc_ss)
 
@@ -994,10 +990,11 @@ class SignalDisplay(QWidget):
 
         self.create_conglomerate_disconts()
         self.check_data_map_uutc_ss()
-        self.set_plot_data()
 
         # Reset data_array where the channel is not set
-        self.data_array[~self.data_map._map['ch_set']] = np.array(0, 'float32')
+        if self.data_array is not None:
+            self.data_array[~self.data_map._map['ch_set']] = np.array(0,
+                                                                      'float32')
 
     # ----- Load data start -----
 
@@ -1218,7 +1215,6 @@ class SignalDisplay(QWidget):
         data = np.empty(len(self.get_plot_containers()), object)
         visibility = []
         for li, pc in enumerate(self.get_plot_containers()):
-
             data[li] = pc.data
             pc._visual_array_idx = li
 

@@ -165,7 +165,7 @@ class SignalContainer(BaseVisualContainer):
     def transoform_chain_add(self, transform):
         if transform in self.transform_chain:
             return
-        transform.modify_visual_container()
+        transform.modify_visual_container(self)
         self.transform_chain.append(transform)
         if self.container is not None:
             self.container.update_label()
