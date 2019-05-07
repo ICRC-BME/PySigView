@@ -491,6 +491,7 @@ class SignalDisplay(QWidget):
                 # Time
                 max_step = 1/self.curr_pc.fsamp
                 time_dist = moving[0]-fixed[0]
+                time_dist *= np.diff(self.curr_pc.uutc_ss)[0] / 1e6
                 time_dist -= time_dist % max_step
                 oround = int(np.ceil((np.log10(self.curr_pc.fsamp))))
                 time_str = format(time_dist, '.'+str(oround)+'f')+' s'
