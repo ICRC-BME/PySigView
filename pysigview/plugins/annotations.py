@@ -995,19 +995,17 @@ class Annotations(BasePluginWidget):
 
         # Check that field exists
         if not self.as_le.text() in df.keys():
-            QMessageBox.critical(self, "Column missing",
-                                 'Annotation start is not in table')
+            msg_text = 'Annotation start is not in table, aborting...'
+            QMessageBox.critical(self, "Column missing", msg_text)
             return
 
         if not self.ae_le.text() in df.keys():
-            QMessageBox.critical(self, "Column missing",
-                                 'Annotation stop is not in table')
-            return
+            msg_text = 'Annotation stop is not in table, filling NaNs'
+            QMessageBox.warning(self, "Column missing", msg_text)
 
         if not self.ac_le.text() in df.keys():
-            QMessageBox.critical(self, "Column missing",
-                                 'Annotation channel is not in table')
-            return
+            msg_text = 'Annotation stop is not in table, filling NaNs'
+            QMessageBox.warning(self, "Column missing", msg_text)
 
         # Rename the fields
         rename_dict = {}
@@ -1022,6 +1020,9 @@ class Annotations(BasePluginWidget):
         # This only a one point annotation
         if not self.ae_le.text():
             df['end_time'] = np.nan
+
+        if not self.ac_le.text():
+            df['channel'] = np.nan        
 
         self.add_annotation_set(df, self.tb_le.text())
 
