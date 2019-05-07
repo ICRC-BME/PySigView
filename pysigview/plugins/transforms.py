@@ -217,6 +217,7 @@ class TransformButtons(QWidget):
 
         curr_transform = self.plugin.signal_preview.preview_temp_transform
         transform_view = self.plugin.transform_view
+        signal_preview = self.plugin.signal_preview
 
         if curr_transform is None:
             return
@@ -242,6 +243,8 @@ class TransformButtons(QWidget):
         self.apply_btn.setDisabled(False)
 
         self.plugin.transform_view.create_transform_columns()
+        signal_preview.orig_sig.pos = signal_preview.trans_sig.pos
+        signal_preview.trans_sig.pos = None
 
     def apply_transforms(self):
         """
@@ -275,7 +278,6 @@ class TransformButtons(QWidget):
                     for transform in item.temporary_chain[:]:
                         ch_item.pvc.transoform_chain_add(transform)
 
-        # TODO - cleanup TransformChainView and shown channel
         self.plugin.transform_view.clear()
         self.visible_channels.update_plot_positions()
         self.visible_channels.items_added.emit()
@@ -381,13 +383,11 @@ class SignalPreview(QWidget):
     def set_orig_trans_sig(self):
 
         dap = self.preview_pvc.data_array_pos
-        data = self.main.signal_display.data_array[dap]
+        data = np.squeeze(np.vstack(self.main.signal_display.data_array[dap]))
 
         if len(self.preview_transform_chain):
             for t in self.preview_transform_chain:
                 data = t.apply_transform(data)
-        else:
-            data = data[0]
 
         y = data.astype('float32')
         x = np.arange(len(y), dtype='float32')
