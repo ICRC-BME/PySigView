@@ -1022,7 +1022,7 @@ class Annotations(BasePluginWidget):
             df['end_time'] = np.nan
 
         if not self.ac_le.text():
-            df['channel'] = np.nan        
+            df['channel'] = np.nan
 
         self.add_annotation_set(df, self.tb_le.text())
 
