@@ -19,7 +19,6 @@ United States
 """
 
 # Standard library imports
-import copy
 
 # Third party imports
 from PyQt5.QtCore import pyqtSignal, Qt
@@ -48,16 +47,17 @@ class PlotAttributeItem(QTreeWidgetItem):
         self.main = parent.main
 
         # Widget settings
-        self.item_widget = AttributeItemWidget(attrb[0], attrb[1], attrb[2])
+        self.item_widget = AttributeItemWidget(attrb[0],
+                                               attrb[1][0],
+                                               attrb[1][1])
         self.treeWidget().setItemWidget(self, 0, self.item_widget)
 
         # Is not read only
-        if not attrb[2]:
-            self.item_widget.value_le.returnPressed.connect(self.update_ea)
+        self.item_widget.item_changed.connect(self.update_ea)
 
     def update_ea(self):
         self.parent().pvc.set_eas(self.item_widget.label.text(),
-                                  self.item_widget.value_le.text())
+                                  self.item_widget.value)
         self.main.signal_display.update_data_map_channels()
         self.main.signal_display.set_plot_data()
 
@@ -76,7 +76,7 @@ class PlotContainerItem(QTreeWidgetItem):
 
         # Expose seleted variables
         self.pas = []
-        for ea in self.pvc.exposed_attributes:
+        for ea in self.pvc.exposed_attributes.items():
             pa = PlotAttributeItem(ea, self)
             self.pas.append(pa)
 
@@ -112,9 +112,9 @@ class PlotContainerItem(QTreeWidgetItem):
         self.sd.update_signals()
 
     def update_pas(self):
-        for ea, pa in zip(self.pvc.exposed_attributes, self.pas):
+        for ea, pa in zip(self.pvc.exposed_attributes.items(), self.pas):
             pa.item_widget.label.setText(ea[0])
-            pa.item_widget.value_le.setText(str(ea[1]))
+            pa.item_widget.value = ea[1][0]
 
     def create_duplicate(self):
 

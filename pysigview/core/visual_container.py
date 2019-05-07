@@ -18,6 +18,7 @@ Rochester, MN
 United States
 """
 # Std imports
+from collections import OrderedDict
 
 # Third pary imports
 import numpy as np
@@ -37,7 +38,7 @@ class BaseVisualContainer():
         self.unit = ''  # Duplicate of header info but keeps things neat
         self.start_time = 0
         self.plot_position = [0, 0, 0]  # Not used [] coordinates - row, column
-        self.uutc_ss = []
+        self.uutc_ss = np.zeros(2)
         self.container = None  # ??? Rename to container_item?
         self.data_array_pos = []
         self.visual = None
@@ -63,23 +64,24 @@ class SignalContainer(BaseVisualContainer):
 
         self.transform_chain = []
 
-        # Exposed attributes [name, value, read only flag]
-        self.exposed_attributes = [['Sampling frequency',
-                                    self.fsamp, True],
-                                   ['Voltage factor',
-                                    self.ufact, True],
-                                   ['Unit',
-                                    self.unit, True],
-                                   ['Plot position',
-                                    self.plot_position, True],
-                                   ['uUTC start/stop',
-                                    self.uutc_ss, True],
-                                   ['Time span(s)',
-                                    np.diff(self.uutc_ss), False],
-                                   ['Alpha',
-                                    self.line_alpha, False],
-                                   [self.unit+' per px',
-                                    self.ufact*self.scale_factor, False]]
+        self.exposed_attributes = OrderedDict({'Sampling frequency': [
+                                               self.fsamp, True],
+                                               'Voltage factor': [
+                                               self.ufact, True],
+                                               'Unit': [
+                                               self.unit, True],
+                                               'Plot position': [
+                                               self.plot_position, True],
+                                               'uUTC start/stop': [
+                                               self.uutc_ss, True],
+                                               'Time span(s)': [
+                                               np.diff(self.uutc_ss)[0] / 1e6,
+                                               False],
+                                               (self.unit+' per px'): [
+                                               self.ufact*self.scale_factor,
+                                               False],
+                                               'Autoscale': [
+                                               self.autoscale, False]})
 
     @property
     def name(self):
@@ -131,36 +133,37 @@ class SignalContainer(BaseVisualContainer):
 
     def update_eas(self):
         # Exposed attributes [name, value, read only flag]
-        self.exposed_attributes = [['Sampling frequency',
-                                    self.fsamp, True],
-                                   ['Unit factor',
-                                    self.ufact, True],
-                                   ['Unit',
-                                    self.unit, True],
-                                   ['Plot position',
-                                    self.plot_position, True],
-                                   ['uUTC start/stop',
-                                    self.uutc_ss, True],
-                                   ['Time span(s)',
-                                    np.diff(self.uutc_ss)[0]/1e6, False],
-                                   ['Alpha',
-                                    self.line_alpha, False],
-                                   [self.unit+' per px',
-                                    self.ufact*self.scale_factor, False]]
+        self.exposed_attributes = OrderedDict({'Sampling frequency': [
+                                               self.fsamp, True],
+                                               'Voltage factor': [
+                                               self.ufact, True],
+                                               'Unit': [
+                                               self.unit, True],
+                                               'Plot position': [
+                                               self.plot_position, True],
+                                               'uUTC start/stop': [
+                                               self.uutc_ss, True],
+                                               'Time span(s)': [
+                                               np.diff(self.uutc_ss)[0] / 1e6,
+                                               False],
+                                               (self.unit+' per px'): [
+                                               self.ufact*self.scale_factor,
+                                               False],
+                                               'Autoscale': [
+                                               self.autoscale, False]})
 
     def set_eas(self, label, value):
-        idx = [i for i, x in enumerate(self.exposed_attributes)
-               if x[0] == label][0]
         # TODO - think of a better way to do this
-        if idx == 5:
+        if label == 'Time span(s)':
             uutc_span = float(value) * 1e6
             uutc_midpoint = np.sum(self.uutc_ss) / 2
             self.uutc_ss[0] = uutc_midpoint - uutc_span / 2
             self.uutc_ss[1] = uutc_midpoint + uutc_span / 2
-        elif idx == 6:
-            self.line_alpha = float(value)
-        elif idx == 7:
+        elif label == self.unit+' per px':
             pass
+        elif label == 'Autoscale':
+            print(value)
+            self.autoscale = value
 
     def transoform_chain_add(self, transform):
         if transform in self.transform_chain:

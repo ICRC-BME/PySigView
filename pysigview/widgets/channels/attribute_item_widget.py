@@ -19,31 +19,56 @@ United States
 """
 
 # Third pary imports
-from PyQt5.QtWidgets import (QHBoxLayout, QWidget, QLabel, QLineEdit)
+from PyQt5.QtWidgets import (QHBoxLayout, QWidget, QLabel, QLineEdit,
+                             QCheckBox)
+from PyQt5.QtCore import pyqtSignal
 
 # Local imports
 
 
 class AttributeItemWidget(QWidget):
+
+    item_changed = pyqtSignal(name='items_changed')
+
     def __init__(self, label_text, value, editable):
         super().__init__()
 
         self.layout = QHBoxLayout()
         self.layout.setContentsMargins(0, 0, 0, 0)
 
-
-#        self.check_box = QCheckBox()
-#        self.check_box.setMaximumWidth(18)
-#        self.check_box.setCheckState(Qt.Checked)
-
-#        self.color_select = ColorButton(init_color)
+        self._value = value
+        self._is_bool = isinstance(value, bool)
 
         self.label = QLabel(label_text)
-
-        self.value_le = QLineEdit(str(value))
-        self.value_le.setReadOnly(editable)
+        if isinstance(self._value, bool):
+            self.value_field = QCheckBox()
+            self.value_field.setChecked(self._value)
+            self.value_field.setCheckable(~editable)
+            self.value_field.clicked.connect(self.emit_field_changed)
+        else:
+            self.value_field = QLineEdit(str(self._value))
+            self.value_field.setReadOnly(editable)
+            self.value_field.returnPressed.connect(self.emit_field_changed)
 
         self.setLayout(self.layout)
 
         self.layout.addWidget(self.label)
-        self.layout.addWidget(self.value_le)
+        self.layout.addWidget(self.value_field)
+
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self, value):
+        if self._is_bool:
+            self.value_field.setChecked(value)
+        else:
+            self.value_field.setText(str(value))
+
+    def emit_field_changed(self):
+        if self._is_bool:
+            self._value = self.value_field.isChecked()
+        else:
+            self._value = self.value_field.text()
+        self.item_changed.emit()
