@@ -891,7 +891,8 @@ class SignalDisplay(QWidget):
                 min_idx += (li + indices[pos_i])
 
                 vis_index[indices[pos_i]:indices[pos_i]+line_len] = 0
-                vis_index[(max_idx) & (min_idx)] = 1
+                vis_index[max_idx] = 1
+                vis_index[min_idx] = 1
 
         self.signal_visual.index = vis_index
 
@@ -995,8 +996,8 @@ class SignalDisplay(QWidget):
 
         # Reset data_array where the channel is not set
         if self.data_array is not None:
-            self.data_array[~self.data_map._map['ch_set']] = np.array(0,
-                                                                      'float32')
+            self.data_array[
+                    ~self.data_map._map['ch_set']] = np.array(0, 'float32')
 
     # ----- Load data start -----
 
