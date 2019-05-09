@@ -24,8 +24,8 @@ United States
 # Std imports
 
 # Third pary imports
-from PyQt5.QtCore import QAbstractTableModel, Qt, pyqtSignal
-from PyQt5.QtWidgets import QTableView
+from PyQt5.QtCore import QAbstractTableModel, QModelIndex, Qt, pyqtSignal
+from PyQt5.QtWidgets import QTableView, QAbstractScrollArea
 
 import numpy as np
 
@@ -40,6 +40,8 @@ class DataFrameView(QTableView):
     def __init__(self, df, parent=None):
         super().__init__()
 
+        self.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
+
         self.model = DataFrameModel(df, self)
 
         self.setModel(self.model)
@@ -52,6 +54,22 @@ class DataFrameView(QTableView):
 
         # signals
         self.selectionModel().selectionChanged.connect(self.evaluate_selection)
+        self.model.dataChanged.connect(self.pass_data_changed_signal)
+
+        # sort
+        self.model.sort(0, Qt.AscendingOrder)
+
+        # adjust size
+        self.resizeColumnsToContents()
+
+    # Custom key events
+    def keyPressEvent (self, e):
+        super(DataFrameView, self).keyPressEvent(e)
+
+        if e.key() == Qt.Key_Delete:
+            indexes = self.selectionModel().selectedIndexes()
+            self.model.removeRows(indexes)
+
 
     def set_selection_mode(self, value):
         if value:
@@ -67,7 +85,7 @@ class DataFrameView(QTableView):
                 and not (sum(np.diff([i.row() for i in indexes])))):
             self.row_selected.emit(self.model.df.index[indexes[0].row()])
 
-    def pass_data_changed_signal(self, i, j):
+    def pass_data_changed_signal(self, ia, ib):
         self.data_changed.emit()
 
 
@@ -77,7 +95,7 @@ class DataFrameModel(QAbstractTableModel):
     """
     def __init__(self, df, parent=None):
         QAbstractTableModel.__init__(self, parent)
-        self.df = df.copy()
+        self.df = df
 
     def rowCount(self, parent=None):
         return self.df.shape[0]
@@ -103,6 +121,16 @@ class DataFrameModel(QAbstractTableModel):
             self.df.loc[r, c] = value
             self.dataChanged.emit(index, index)
             return True
+
+    def removeRows(self, indexes):
+        rows = [idx.row() for idx in indexes]
+        self.beginResetModel()
+        self.beginRemoveRows(QModelIndex(), min(rows), max(rows))
+        self.df.drop(self.df.index[[rows]], inplace=True)
+        self.endRemoveRows()
+        self.endResetModel()
+        self.dataChanged.emit(QModelIndex(), QModelIndex())
+        
 
     def headerData(self, n, orientation, role):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:

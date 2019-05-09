@@ -246,8 +246,8 @@ class AnnotationSet(QTreeWidgetItem):
         layout = QVBoxLayout()
         self.df_view = DataFrameView(self.df, self)
         self.df_view.row_selected.connect(self.shift_to_annot)
-        # FIXME: this does not wotk when edited
         self.df_view.data_changed.connect(self.plot_set)
+        self.df_view.data_changed.connect(self.update_count)
         layout.addWidget(self.df_view)
 
         self.browse_cb = QCheckBox("Browse mode", self.pop_diag)
@@ -722,8 +722,8 @@ class AnnotationSubset(QTreeWidgetItem):
         layout = QVBoxLayout()
         self.df_view = DataFrameView(self.parent().df[self.df_map], self)
         self.df_view.row_selected.connect(self.parent().shift_to_annot)
-        # FIXME: this does not wotk when edited
-        self.df_view.data_changed.connect(self.parent().plot_set)
+        self.df_view.data_changed.connect(self.plot_set)
+        self.df_view.data_changed.connect(self.update_count)
         layout.addWidget(self.df_view)
 
         self.browse_cb = QCheckBox("Browse mode", self.pop_diag)
