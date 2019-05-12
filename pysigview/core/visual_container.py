@@ -64,6 +64,8 @@ class SignalContainer(BaseVisualContainer):
 
         self.transform_chain = []
 
+        px_per_unit = np.float64(1) / (self.ufact * self.scale_factor)
+
         self.exposed_attributes = OrderedDict({'Sampling frequency': [
                                                self.fsamp, True],
                                                'Voltage factor': [
@@ -72,13 +74,15 @@ class SignalContainer(BaseVisualContainer):
                                                self.unit, True],
                                                'Plot position': [
                                                self.plot_position, True],
-                                               'uUTC start/stop': [
-                                               self.uutc_ss, True],
+                                               'uUTC start': [
+                                               int(self.uutc_ss[0]), True],
+                                               'uUTC stop': [
+                                               int(self.uutc_ss[1]), True],
                                                'Time span(s)': [
                                                np.diff(self.uutc_ss)[0] / 1e6,
                                                False],
-                                               (self.unit+' per px'): [
-                                               self.ufact*self.scale_factor,
+                                               ('Pixels per '+self.unit): [
+                                               px_per_unit,
                                                False],
                                                'Autoscale': [
                                                self.autoscale, False]})
@@ -132,6 +136,9 @@ class SignalContainer(BaseVisualContainer):
         self._visible = visible
 
     def update_eas(self):
+
+        px_per_unit = np.float64(1) / (self.ufact * self.scale_factor)
+
         # Exposed attributes [name, value, read only flag]
         self.exposed_attributes = OrderedDict({'Sampling frequency': [
                                                self.fsamp, True],
@@ -141,13 +148,15 @@ class SignalContainer(BaseVisualContainer):
                                                self.unit, True],
                                                'Plot position': [
                                                self.plot_position, True],
-                                               'uUTC start/stop': [
-                                               self.uutc_ss, True],
+                                               'uUTC start': [
+                                               int(self.uutc_ss[0]), True],
+                                               'uUTC stop': [
+                                               int(self.uutc_ss[1]), True],
                                                'Time span(s)': [
                                                np.diff(self.uutc_ss)[0] / 1e6,
                                                False],
-                                               (self.unit+' per px'): [
-                                               self.ufact*self.scale_factor,
+                                               ('Pixels per '+self.unit): [
+                                               px_per_unit,
                                                False],
                                                'Autoscale': [
                                                self.autoscale, False]})
@@ -162,7 +171,6 @@ class SignalContainer(BaseVisualContainer):
         elif label == self.unit+' per px':
             pass
         elif label == 'Autoscale':
-            print(value)
             self.autoscale = value
 
     def transoform_chain_add(self, transform):

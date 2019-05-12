@@ -21,7 +21,8 @@ United States
 # Third pary imports
 from PyQt5.QtWidgets import (QHBoxLayout, QWidget, QLabel, QLineEdit,
                              QCheckBox)
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtGui import QIntValidator, QDoubleValidator
 
 # Local imports
 
@@ -48,12 +49,23 @@ class AttributeItemWidget(QWidget):
         else:
             self.value_field = QLineEdit(str(self._value))
             self.value_field.setReadOnly(editable)
+            self.value_field.setAlignment(Qt.AlignCenter)
             self.value_field.returnPressed.connect(self.emit_field_changed)
+            if isinstance(self._value, int):
+                self.int_validator = QIntValidator(self)
+                self.value_field.setValidator(self.int_validator)
+            elif isinstance(self._value, float):
+                self.double_validator = QDoubleValidator(self)
+                self.double_validator.setDecimals(5)
+                self.value_field.setValidator(self.double_validator)
 
         self.setLayout(self.layout)
 
+        self.label.setFixedWidth(150)
+
         self.layout.addWidget(self.label)
         self.layout.addWidget(self.value_field)
+        self.layout.addStretch()
 
     @property
     def value(self):
