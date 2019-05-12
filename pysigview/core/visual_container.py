@@ -64,7 +64,10 @@ class SignalContainer(BaseVisualContainer):
 
         self.transform_chain = []
 
-        px_per_unit = np.float64(1) / (self.ufact * self.scale_factor)
+        if self.ufact * self.scale_factor != 0:
+            px_per_unit = np.float64(1) / (self.ufact * self.scale_factor)
+        else:
+            px_per_unit = 0
 
         self.exposed_attributes = OrderedDict({'Sampling frequency': [
                                                self.fsamp, True],
