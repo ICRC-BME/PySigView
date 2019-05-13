@@ -49,7 +49,7 @@ class LoadedDataBar(LinearRegion):
 class BarWidget(QWidget):
 
     # Signals
-    bar_slider_changed = pyqtSignal(name='')
+    bar_slider_changed = pyqtSignal(name='bar_slider_changed')
 
     def __init__(self, parent):
         super(BarWidget, self).__init__(parent)
@@ -371,12 +371,6 @@ class ToolsWidget(QWidget):
         self.location_le.setText(loc_str + loc_substr)
         self.span_le.setText(span_str + span_substr)
 
-#    def location_format_check(self, text):
-#        print(self.main.recording_info['recording_start'])
-#        print(self.location_validator.bottom())
-#        print(self.location_validator.validate(text,1))
-#        return
-
     def set_location(self):
         if self.radio_to_date.isChecked():
             midpoint = self.date_to_uutc(self.location_le.text())
@@ -472,8 +466,6 @@ class NavigationBar(BasePluginWidget):
 
     def update_navigation(self):
         self.bar_widget.metadata_reload_flag = True
-        print('------------------------------')
-        print(sm.ODS)
         self.bar_widget.recording_duration = self.ri['recording_duration']
         self.bar_widget.recording_start = self.ri['recording_start']
         self.bar_widget.recording_span = (self.ri['recording_end']
