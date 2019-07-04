@@ -38,8 +38,11 @@ from pysigview.widgets.transforms.filters import Filters
 from pysigview.widgets.transforms.montages import Montages
 from pysigview.widgets.transforms.envelopes import Envelopes
 from pysigview.plugins.channels import PlotContainerItem, PlotCollectionItem
+from pysigview.core.visual_container import SignalContainer
 
 from pysigview.visuals.simple_line_visual import SimpleLine
+
+from pysigview.core import source_manager as sm
 
 
 class TransformChainItem(QTreeWidgetItem):
@@ -108,7 +111,7 @@ class TransformChainView(QTreeWidget):
                     cont_trans_item = TransformChainItem(self, di)
                     cont_trans_item.setText(0, di.pvc.name)
                     for i, trans in enumerate(di.pvc.transform_chain):
-                            cont_trans_item.setText(i+1, trans.name)
+                        cont_trans_item.setText(i+1, trans.name)
                     self.addTopLevelItem(cont_trans_item)
                 else:
                     pass
@@ -121,8 +124,17 @@ class TransformChainView(QTreeWidget):
     def set_preview_pvc(self, item):
         if hasattr(item.channel_item, 'pvc'):
             pvc = item.channel_item.pvc
+
             temp_chain = item.temporary_chain
-            self.parent().signal_preview.preview_pvc = pvc
+
+            preview_pvc = SignalContainer(pvc.orig_channel)
+            preview_pvc.fsamp = pvc.fsamp
+            preview_pvc.ufact = pvc.ufact
+            preview_pvc.data_array_pos = pvc.data_array_pos.copy()
+            preview_pvc.uutc_ss = pvc.uutc_ss.copy()
+            preview_pvc.transform_chain = pvc.transform_chain
+
+            self.parent().signal_preview.preview_pvc = preview_pvc
             self.parent().signal_preview.preview_transform_chain = temp_chain
 
             self.parent().signal_preview.set_orig_trans_sig()
@@ -205,6 +217,7 @@ class TransformButtons(QWidget):
 
         curr_transform = self.plugin.signal_preview.preview_temp_transform
         transform_view = self.plugin.transform_view
+        signal_preview = self.plugin.signal_preview
 
         if curr_transform is None:
             return
@@ -230,6 +243,8 @@ class TransformButtons(QWidget):
         self.apply_btn.setDisabled(False)
 
         self.plugin.transform_view.create_transform_columns()
+        signal_preview.orig_sig.pos = signal_preview.trans_sig.pos
+        signal_preview.trans_sig.pos = None
 
     def apply_transforms(self):
         """
@@ -256,14 +271,13 @@ class TransformButtons(QWidget):
                         continue
 
                     if self.creat_copies_cb.isChecked():
-                        dup_ch_item = item.channel_item.create_duplicate()
-                        for transform in item.temporary_chain[:]:
-                            transform.visual_container = dup_ch_item.pvc
+                        ch_item = item.channel_item.create_duplicate()
                     else:
-                        for transform in item.temporary_chain[:]:
-                            transform.visual_container = item.channel_item.pvc
+                        ch_item = item.channel_item
 
-        # TODO - cleanup TransformChainView and shown channel
+                    for transform in item.temporary_chain[:]:
+                        ch_item.pvc.transoform_chain_add(transform)
+
         self.plugin.transform_view.clear()
         self.visible_channels.update_plot_positions()
         self.visible_channels.items_added.emit()
@@ -282,8 +296,10 @@ class SignalPreview(QWidget):
         self.main = self.parent().main
         self.transform_buttons = self.parent().transform_buttons
 
-        self.preview_pvc_idx = 0
+        # self.preview_pvc_idx = 0
         self.preview_pvc = None
+        # self.preview_dap = None
+        # self.preview_uutc_ss = None
         self.preview_transform_chain = []
         self.preview_temp_transform = None
 
@@ -330,7 +346,17 @@ class SignalPreview(QWidget):
             return
 
         dap = self.preview_pvc.data_array_pos
-        data = np.squeeze(np.vstack(self.main.signal_display.data_array[dap]))
+
+        # Check if all the data is in data_array
+        sd = self.main.signal_display
+
+        # We have to load the data here!
+        dm = sm.DataMap()
+        dm.setup_data_map(sd.data_map._map)
+        dm.reset_data_map()
+        dm['ch_set'][dap] = True
+        dm['uutc_ss'][dap] = self.preview_pvc.uutc_ss
+        data = np.squeeze(np.vstack(sm.PDS.get_data(dm)[dap]))
 
         for t in self.preview_transform_chain + [self.preview_temp_transform]:
             data = t.apply_transform(data)
@@ -357,13 +383,11 @@ class SignalPreview(QWidget):
     def set_orig_trans_sig(self):
 
         dap = self.preview_pvc.data_array_pos
-        data = self.main.signal_display.data_array[dap]
+        data = np.squeeze(np.vstack(self.main.signal_display.data_array[dap]))
 
         if len(self.preview_transform_chain):
             for t in self.preview_transform_chain:
                 data = t.apply_transform(data)
-        else:
-            data = data[0]
 
         y = data.astype('float32')
         x = np.arange(len(y), dtype='float32')

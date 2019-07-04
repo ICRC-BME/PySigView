@@ -246,8 +246,8 @@ class AnnotationSet(QTreeWidgetItem):
         layout = QVBoxLayout()
         self.df_view = DataFrameView(self.df, self)
         self.df_view.row_selected.connect(self.shift_to_annot)
-        # FIXME: this does not wotk when edited
         self.df_view.data_changed.connect(self.plot_set)
+        self.df_view.data_changed.connect(self.update_count)
         layout.addWidget(self.df_view)
 
         self.browse_cb = QCheckBox("Browse mode", self.pop_diag)
@@ -658,14 +658,12 @@ class AnnotationSubset(QTreeWidgetItem):
 
         self.condition_str = ''
 
-        self.label_text = 'NA'
-
         self.plot_data = True
 
         self.annotation_list = self.parent().annotation_list
 
         # Widget settings
-        self.item_widget = AnnotationItemWidget(self.label_text)
+        self.item_widget = AnnotationItemWidget('NA')
         self.treeWidget().setItemWidget(self, 0, self.item_widget)
 
         # Connect signals
@@ -724,8 +722,8 @@ class AnnotationSubset(QTreeWidgetItem):
         layout = QVBoxLayout()
         self.df_view = DataFrameView(self.parent().df[self.df_map], self)
         self.df_view.row_selected.connect(self.parent().shift_to_annot)
-        # FIXME: this does not wotk when edited
-        self.df_view.data_changed.connect(self.parent().plot_set)
+        self.df_view.data_changed.connect(self.plot_set)
+        self.df_view.data_changed.connect(self.update_count)
         layout.addWidget(self.df_view)
 
         self.browse_cb = QCheckBox("Browse mode", self.pop_diag)
@@ -995,19 +993,17 @@ class Annotations(BasePluginWidget):
 
         # Check that field exists
         if not self.as_le.text() in df.keys():
-            QMessageBox.critical(self, "Column missing",
-                                 'Annotation start is not in table')
+            msg_text = 'Annotation start is not in table, aborting...'
+            QMessageBox.critical(self, "Column missing", msg_text)
             return
 
         if not self.ae_le.text() in df.keys():
-            QMessageBox.critical(self, "Column missing",
-                                 'Annotation stop is not in table')
-            return
+            msg_text = 'Annotation stop is not in table, filling NaNs'
+            QMessageBox.warning(self, "Column missing", msg_text)
 
         if not self.ac_le.text() in df.keys():
-            QMessageBox.critical(self, "Column missing",
-                                 'Annotation channel is not in table')
-            return
+            msg_text = 'Annotation stop is not in table, filling NaNs'
+            QMessageBox.warning(self, "Column missing", msg_text)
 
         # Rename the fields
         rename_dict = {}
@@ -1022,6 +1018,9 @@ class Annotations(BasePluginWidget):
         # This only a one point annotation
         if not self.ae_le.text():
             df['end_time'] = np.nan
+
+        if not self.ac_le.text():
+            df['channel'] = np.nan
 
         self.add_annotation_set(df, self.tb_le.text())
 
@@ -1154,8 +1153,9 @@ class Annotations(BasePluginWidget):
             # Check if the set with the given name already exists
             if len([x for x in present_annots
                     if x.label_text == an_set['text']]):
-                quest_text = ('"'+an_set['text']+'" annotation set already'
-                              ' exists. Do you want to load it anyway?')
+                quest_text = ('"'+an_set['text']+'" is present in the'
+                              ' recording. Do you want to load it from'
+                              ' PySigView session?')
                 resp = QMessageBox.question(self,
                                             'Annotation set exists',
                                             quest_text)
@@ -1178,14 +1178,17 @@ class Annotations(BasePluginWidget):
                 an_set_obj.addChild(new_subset)
                 new_subset.df_map = an_subset['df_map']
                 new_subset.condition_str = an_subset['condition_str']
-                new_subset.label_text = an_subset['label_text']
+                new_subset.set_label(an_subset['text'])
                 new_subset.plot_data = an_subset['plot_data']
-                an_subset.item_widget.check_box.setChecked()
+                new_subset.item_widget.check_box.setChecked(True)
 
                 # Set color of the color widget
                 t_color = tuple(an_subset['color'])
                 new_subset.item_widget.color_select.set_color(t_color)
                 new_subset.color = t_color
+
+                # Update count
+                new_subset.update_count()
 
             an_set_obj.plot_set()
 
@@ -1207,7 +1210,7 @@ class Annotations(BasePluginWidget):
                 an_subset = {}
                 an_subset['df_map'] = an_subset_obj.df_map
                 an_subset['condition_str'] = an_subset_obj.condition_str
-                an_subset['label_text'] = an_subset_obj.label_text
+                an_subset['text'] = an_subset_obj.item_widget.label.text()
                 an_subset['plot_data'] = an_subset_obj.plot_data
                 an_subset['color'] = an_subset_obj.color
 

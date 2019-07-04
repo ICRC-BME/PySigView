@@ -97,8 +97,9 @@ class SimpleLineVisual(visuals.Visual):
 
     @pos.setter
     def pos(self, pos):
-
         if pos is not None:
+            if pos.dtype == np.float64:
+                pos = pos.astype(np.float32)
             if self._pos is not None and len(pos) != len(self._pos):
                 self._index = None
                 self._changed['index'] = True

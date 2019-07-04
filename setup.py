@@ -86,7 +86,7 @@ def get_packages():
     return packages
 
 # =============================================================================
-# Make Linux detect Spyder desktop file
+# Make Linux detect PySigView desktop file
 # =============================================================================
 
 
@@ -131,7 +131,7 @@ if os.name == 'nt':
 # =============================================================================
 
 setup_args = dict(name='pysigview',
-                  version='0.0a9',
+                  version='0.0b1',
                   description='Package for viewing signals using VisPy',
                   url='https://github.com/ICRC-BME/PySigView',
                   author='Jan Cimbalnik',
@@ -146,7 +146,7 @@ setup_args = dict(name='pysigview',
                                     'pyopengl', 'pandas', 'scipy', 'bcolz',
                                     'sqlalchemy', 'pymysql', 'pysigview_cs',
                                     'pillow', 'jupyter',
-                                    'pymef>=0.2', 'pydread'],
+                                    'pymef>=1.0', 'pydread'],
                   zip_safe=False,
                   classifiers=['License :: OSI Approved :: MIT License',
                                'Operating System :: MacOS',

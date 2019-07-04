@@ -34,14 +34,24 @@ from pysigview.core.plot_transform import BasePlotTransform
 
 class FilterTransform(BasePlotTransform):
 
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self):
+        super().__init__()
 
+        self.name = 'filter'
         self.a = None
         self.b = None
 
     def apply_transform(self, data):
         return filtfilt(self.b, self.a, data)
+
+    @property
+    def transform_variables(self):
+        return (self.a, self.b)
+
+    @transform_variables.setter
+    def transforms_variables(self, a, b):
+        self.a = a
+        self.b = b
 
 
 class Filters(QWidget):
@@ -168,13 +178,11 @@ class Filters(QWidget):
                 return
 
         # Greate the transform object
-        transform = FilterTransform(self)
+        transform = FilterTransform()
         transform.a = a
         transform.b = b
         transform.name = (' / ' + selected_filter + '; '
                           + '-'.join([low_fc_str, high_fc_str]) + 'Hz')
-        # Set directly - we do not want to modify the original container!
-        transform._vc = vc
 
         return transform
 

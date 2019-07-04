@@ -33,14 +33,22 @@ from pysigview.core.plot_transform import BasePlotTransform
 # TODO - move this to plugins subfolder
 class EnvelopeTransform(BasePlotTransform):
 
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self):
+        super().__init__()
 
+        self.name = 'envelope'
         self.pow = 1
 
     def apply_transform(self, data):
-
         return abs(hilbert(data))**self.pow
+
+    @property
+    def transform_variables(self):
+        return self.pow
+
+    @transform_variables.setter
+    def transforms_variables(self, pow):
+        self.pow = pow
 
 
 class Envelopes(QWidget):
@@ -118,14 +126,12 @@ class Envelopes(QWidget):
             return
 
         # Create the transform object
-        transform = EnvelopeTransform(self)
+        transform = EnvelopeTransform()
 
         if self.envelope_check_power.isChecked():
             transform.pow = 2
 
         transform.name = ('/SignalEnvelope')
-        # Set directly - we do not want to modify the original container!
-        transform._vc = vc
 
         return transform
 

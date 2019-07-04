@@ -491,6 +491,7 @@ class SignalDisplay(QWidget):
                 # Time
                 max_step = 1/self.curr_pc.fsamp
                 time_dist = moving[0]-fixed[0]
+                time_dist *= np.diff(self.curr_pc.uutc_ss)[0] / 1e6
                 time_dist -= time_dist % max_step
                 oround = int(np.ceil((np.log10(self.curr_pc.fsamp))))
                 time_str = format(time_dist, '.'+str(oround)+'f')+' s'
@@ -764,20 +765,20 @@ class SignalDisplay(QWidget):
             ch_names = [x.orig_channel for x in pcs]
             g_names = []
             for ch_name in ch_names:
-                g_name = ''.join([i for i in ch_name if not i.isdigit()])
-                g_names.append(g_name)
+                stub = ''.join([i for i in ch_name if not i.isdigit()])
+                g_names.append(stub)
             g_names = list(set(g_names))
 
             # TODO - in prefs, color.get_colormaps()
             cm = color.get_colormap(self.color_palette)
             colors = cm[np.linspace(0, 1, len(g_names))]
 
-            for g_name, c in zip(g_names, colors):
-                g_pcs = [x for x in pcs
-                         if x.orig_channel[:len(g_name)] == g_name]
-                for pc in g_pcs:
-                    pc.line_color = c.rgba[0]
-                    pc.container.item_widget.color_select.set_color(c.rgba[0])
+            for pc in pcs:
+                stub = ''.join([i for i in pc.orig_channel if not i.isdigit()])
+                c = colors[g_names.index(stub)]
+                pc.line_color = c.rgba[0]
+                pc.container.item_widget.color_select.set_color(c.rgba[0])
+
             self.update_labels()
 
         elif self.color_coding_mode == 3:
@@ -891,7 +892,8 @@ class SignalDisplay(QWidget):
                 min_idx += (li + indices[pos_i])
 
                 vis_index[indices[pos_i]:indices[pos_i]+line_len] = 0
-                vis_index[(max_idx) & (min_idx)] = 1
+                vis_index[max_idx] = 1
+                vis_index[min_idx] = 1
 
         self.signal_visual.index = vis_index
 
@@ -957,7 +959,6 @@ class SignalDisplay(QWidget):
         self.data_map.reset_data_map()
 
     # TODO: what if there are two channels with the same orig_channels
-    # TODO: what if one container has more org_channels (i.e. montage)
     def update_data_map_channels(self):
         """
         Updates data_map from visible_channels pane and reloads the data.
@@ -970,34 +971,34 @@ class SignalDisplay(QWidget):
         uutc_ss = []
         for pc in pcs:
             pc_chans = [pc.orig_channel] + pc.add_channels
-            # Check if channel is already in the list
-            # !!! TODO - TEMP see the todo above function for montage channels
-            if any([True for x in pc_chans if x in channels]):
 
-                for o_ch in [x for x in pc_chans if x in channels]:
-                    if o_ch in channels:
-                        ch_idx = channels.index(o_ch)
-                        if np.diff(uutc_ss[ch_idx]) < np.diff(pc.uutc_ss):
-                            uutc_ss[ch_idx] = pc.uutc_ss
-                    else:
-                        channels.append(o_ch)
-                        uutc_ss.append(pc.uutc_ss)
+            # Get the channels in the current plot container
+            for o_ch in pc_chans:
 
-            else:
-                for o_ch in pc_chans:
+                # Check if the channel is already in the list
+                if o_ch in channels:
+                    ch_idx = channels.index(o_ch)
+                    if pc.uutc_ss[0] < uutc_ss[ch_idx][0]:
+                        uutc_ss[ch_idx][0] = pc.uutc_ss[0]
+                    if pc.uutc_ss[1] > uutc_ss[ch_idx][1]:
+                        uutc_ss[ch_idx][1] = pc.uutc_ss[1]
+                else:
                     channels.append(o_ch)
                     uutc_ss.append(pc.uutc_ss)
 
         self.data_map.reset_data_map()
+        if len(channels) == 0:
+            return
         self.data_map.set_channel(np.array(channels),
                                   np.array(uutc_ss))
 
         self.create_conglomerate_disconts()
         self.check_data_map_uutc_ss()
-        self.set_plot_data()
 
         # Reset data_array where the channel is not set
-        self.data_array[~self.data_map._map['ch_set']] = np.array(0, 'float32')
+        if self.data_array is not None:
+            self.data_array[
+                    ~self.data_map._map['ch_set']] = np.array(0, 'float32')
 
     # ----- Load data start -----
 
@@ -1153,6 +1154,9 @@ class SignalDisplay(QWidget):
                 sleep(0.1)
                 continue
 
+        if len(self.data_map.get_active_channels()) == 0:
+            return
+
         self.data_array = sm.PDS.get_data(self.data_map)
 
         pcs = self.get_plot_containers()
@@ -1218,7 +1222,6 @@ class SignalDisplay(QWidget):
         data = np.empty(len(self.get_plot_containers()), object)
         visibility = []
         for li, pc in enumerate(self.get_plot_containers()):
-
             data[li] = pc.data
             pc._visual_array_idx = li
 

@@ -653,8 +653,6 @@ class MainWindow(QMainWindow):
         with open(load_path[0], 'rb') as fid:
             ss = pickle.load(fid)
 
-        print(ss['main'].keys())
-
         # TODO - if the path is missing user should now the original path
         if 'session_path' in ss['main'].keys():
             if os.path.exists(ss['main']['session_path']):

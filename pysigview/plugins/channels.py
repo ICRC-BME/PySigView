@@ -20,7 +20,6 @@ United States
 
 # Standard library imports
 
-
 # Third party imports
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtWidgets import (QAbstractItemView, QListWidget, QListWidgetItem,
@@ -48,16 +47,17 @@ class PlotAttributeItem(QTreeWidgetItem):
         self.main = parent.main
 
         # Widget settings
-        self.item_widget = AttributeItemWidget(attrb[0], attrb[1], attrb[2])
+        self.item_widget = AttributeItemWidget(attrb[0],
+                                               attrb[1][0],
+                                               attrb[1][1])
         self.treeWidget().setItemWidget(self, 0, self.item_widget)
 
         # Is not read only
-        if not attrb[2]:
-            self.item_widget.value_le.returnPressed.connect(self.update_ea)
+        self.item_widget.item_changed.connect(self.update_ea)
 
     def update_ea(self):
         self.parent().pvc.set_eas(self.item_widget.label.text(),
-                                  self.item_widget.value_le.text())
+                                  self.item_widget.value)
         self.main.signal_display.update_data_map_channels()
         self.main.signal_display.set_plot_data()
 
@@ -76,7 +76,7 @@ class PlotContainerItem(QTreeWidgetItem):
 
         # Expose seleted variables
         self.pas = []
-        for ea in self.pvc.exposed_attributes:
+        for ea in self.pvc.exposed_attributes.items():
             pa = PlotAttributeItem(ea, self)
             self.pas.append(pa)
 
@@ -112,9 +112,9 @@ class PlotContainerItem(QTreeWidgetItem):
         self.sd.update_signals()
 
     def update_pas(self):
-        for ea, pa in zip(self.pvc.exposed_attributes, self.pas):
+        for ea, pa in zip(self.pvc.exposed_attributes.items(), self.pas):
             pa.item_widget.label.setText(ea[0])
-            pa.item_widget.value_le.setText(str(ea[1]))
+            pa.item_widget.value = ea[1][0]
 
     def create_duplicate(self):
 
@@ -520,10 +520,18 @@ class Channels(BasePluginWidget):
                                                   main.
                                                   signal_display.
                                                   update_data_map_channels)
+        self.visible_channels.items_added.connect(self.
+                                                  main.
+                                                  signal_display.
+                                                  set_plot_data)
         self.visible_channels.items_removed.connect(self.
                                                     main.
                                                     signal_display.
                                                     update_data_map_channels)
+        self.visible_channels.items_removed.connect(self.
+                                                    main.
+                                                    signal_display.
+                                                    set_plot_data)
         self.visible_channels.items_reordered.connect(self.
                                                       main.
                                                       signal_display.
@@ -546,7 +554,7 @@ class Channels(BasePluginWidget):
                 new_container_item = PlotContainerItem(pvc,
                                                        collection)
                 new_container_item.pvc.container = new_container_item
-
+                
                 # TODO change text
 
                 # Set color of the color widget
@@ -554,6 +562,8 @@ class Channels(BasePluginWidget):
                 new_container_item.item_widget.color_select.set_color(t_color)
 
                 # Set pvc variables
+                pvc.add_channels = cont['pvc']['add_channels']
+                pvc.data_array_pos = cont['pvc']['data_array_pos']
                 pvc.uutc_ss = cont['pvc']['uutc_ss']
 
                 # Set pvc variables - signal
@@ -562,8 +572,7 @@ class Channels(BasePluginWidget):
                 pvc.autoscale = cont['pvc']['autoscale']
                 pvc.scale_factor = cont['pvc']['scale_factor']
                 pvc.visible = cont['pvc']['visible']
-
-                # TODO - transforms
+                pvc.transform_chain = cont['pvc']['transform_chain']
 
         # Move the items and visuals around
 
@@ -606,6 +615,8 @@ class Channels(BasePluginWidget):
                 pvc = {}
                 pvc['name'] = cont_i.pvc.name
                 pvc['orig_channel'] = cont_i.pvc.orig_channel
+                pvc['add_channels'] = cont_i.pvc.add_channels
+                pvc['data_array_pos'] = cont_i.pvc.data_array_pos
                 pvc['uutc_ss'] = cont_i.pvc.uutc_ss
 
                 if type(cont_i.pvc) == SignalContainer:
@@ -614,6 +625,7 @@ class Channels(BasePluginWidget):
                     pvc['scale_factor'] = cont_i.pvc.scale_factor
                     pvc['autoscale'] = cont_i.pvc.autoscale
                     pvc['visible'] = cont_i.pvc.visible
+                    pvc['transform_chain'] = cont_i.pvc.transform_chain
 
                 container['pvc'] = pvc
 

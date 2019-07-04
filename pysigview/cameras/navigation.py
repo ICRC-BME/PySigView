@@ -110,8 +110,6 @@ class NavigationCamera(PanZoomCamera):
         # When the attached ViewBox reseives a mouse event, it is sent to the
         # camera here.
 
-        print(event)
-
         if event.handled or not self.interactive:
             return
 

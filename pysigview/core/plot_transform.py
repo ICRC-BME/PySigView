@@ -27,33 +27,20 @@ United States
 
 class BasePlotTransform():
 
-    def __init__(self, parent):
-        super().__init__()
+    def __init__(self):
 
         self.name = ''
-        self._vc = None
-        self.parent = parent
 
     def apply_transform(self, data):
         raise NotImplementedError
 
-    def modify_visual_container(self):
+    def modify_visual_container(self, vc):
         return
 
     @property
-    def visual_container(self):
-        return self._vc
-
-    @visual_container.setter
-    def visual_container(self, vc):
-        self._vc = vc
-        self._vc.transoform_chain_add(self)
-
-    @visual_container.deleter
-    def visual_container(self):
-        self._vc.transoform_chain_remove(self)
-        self._vc = None
-
-# TODO demodify the visual container
-# (watch out not to interfere with other transforms)
-# not sure what I meant by this
+    def transform_variables(self):
+        return NotImplementedError
+    
+    @transform_variables.setter
+    def transforms_variables(self, vars):
+        return NotImplementedError
