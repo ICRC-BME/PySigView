@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.com/ICRC-BME/PySigView.svg?branch=master)](https://travis-ci.com/ICRC-BME/PySigView)
 [![DOI](https://zenodo.org/badge/146943108.svg)](https://zenodo.org/badge/latestdoi/146943108)
-
+[![Documentation Status](https://readthedocs.org/projects/pysigview/badge/?version=latest)](https://pysigview.readthedocs.io/en/latest/?badge=latest)
 
 PySigView: Python signal viewer
 ====================================================
