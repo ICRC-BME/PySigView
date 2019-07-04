@@ -112,3 +112,7 @@ venv.bak/
 # pysigview specific
 iconic_set/
 doc/
+
+# sublime-text
+*.sublime-project
+*.sublime-workspace
