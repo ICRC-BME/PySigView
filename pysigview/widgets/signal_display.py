@@ -901,7 +901,6 @@ class SignalDisplay(QWidget):
     def create_conglomerate_disconts(self):
 
         # TODO: what if the channels are changed? This should not be run!
-
         disconts = sm.ODS.data_map['discontinuities']
         chan_mask = self.main.signal_display.data_map['ch_set']
         disconts = disconts[chan_mask]
@@ -911,8 +910,8 @@ class SignalDisplay(QWidget):
             proc_start = self.cong_discontinuities[0][0]
             proc_stop = self.cong_discontinuities[-1][-1]
             for i in range(len(disconts)):
-                disconts[i] = disconts[i][(disconts[i][:, 0] > proc_start)
-                                          & (disconts[i][:, 1] < proc_stop)]
+                disconts[i] = disconts[i][~((disconts[i][:, 0] >= proc_start)
+                                          & (disconts[i][:, 1] <= proc_stop))]
 
         # Channel with the fewest disconts
         min_disc_ch_idx = np.argmin([len(x) for x in disconts])
