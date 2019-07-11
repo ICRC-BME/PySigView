@@ -93,6 +93,9 @@ class SpectrogramVisual(ImageVisual):
 
     @x.setter
     def x(self, x):
+        nan_mean = np.nanmean(x)
+        idx = np.isnan(x)
+        x[idx] = nan_mean
         self._x = x
         self._update_image()
 
