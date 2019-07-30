@@ -27,7 +27,7 @@ from PyQt5.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QPushButton,
 from PyQt5.QtCore import Qt, pyqtSignal, QSize, QThread
 from vispy import scene, color
 from vispy.scene import (LinearRegion, Image, Mesh, GridLines, Markers, Axis,
-                         Line)
+                         Line, Text)
 from vispy.util.event import Event
 import numpy as np
 from scipy.io import savemat
@@ -36,7 +36,6 @@ from PIL import Image as pil_Image
 # Local imports
 from pysigview.cameras.signal_camera import SignalCamera
 from pysigview.core.visual_container import SignalContainer
-from pysigview.visuals.multicolor_text_visual import MulticolorText
 from pysigview.visuals.multiline_visual import Multiline
 from pysigview.visuals.crosshair_visual import Crosshair
 
@@ -179,10 +178,10 @@ class SignalDisplay(QWidget):
         self.measure_line = Line(parent=self.signal_view.scene,
                                  width=3, color=m_color)
         # TODO - textbox
-        self.describe_text = MulticolorText(anchor_x='left',
-                                            anchor_y='bottom',
-                                            parent=self.signal_view.scene,
-                                            color=m_color)
+        self.describe_text = Text(anchor_x='left',
+                                  anchor_y='bottom',
+                                  parent=self.signal_view.scene,
+                                  color=m_color)
 
         # Signal highlighting
         self.highlight_rec = Mesh(parent=self.signal_view.scene,
@@ -203,9 +202,9 @@ class SignalDisplay(QWidget):
         w = CONF.get(self.CONF_SECTION, 'init_line_width')
         self.signal_visual = Multiline(width=w,
                                        parent=self.signal_view.scene)
-        self.label_visual = MulticolorText(anchor_x='left',
-                                           anchor_y='top',
-                                           parent=self.signal_view.scene)
+        self.label_visual = Text(anchor_x='left',
+                                 anchor_y='top',
+                                 parent=self.signal_view.scene)
 
         # TODO - one set of x and y axes for measurements
 
