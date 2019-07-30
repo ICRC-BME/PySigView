@@ -526,11 +526,11 @@ class SpectrogramTools(QWidget):
         # Adjust text
         self.clim_low_le.setText(str(low))
 
-        if self.spectrogram.data is None:
+        if self.spectrogram._data is None:
             return
 
-        d_min = np.min(self.spectrogram.data)
-        d_max = np.max(self.spectrogram.data)
+        d_min = np.min(self.spectrogram._data)
+        d_max = np.max(self.spectrogram._data)
         d_diff = d_max - d_min
         low = ((low/100) * d_diff) + d_min
         high = ((high/100) * d_diff) + d_min
@@ -546,11 +546,11 @@ class SpectrogramTools(QWidget):
         # Adjust text
         self.clim_high_le.setText(str(high))
 
-        if self.spectrogram.data is None:
+        if self.spectrogram._data is None:
             return
 
-        d_min = np.min(self.spectrogram.data)
-        d_max = np.max(self.spectrogram.data)
+        d_min = np.min(self.spectrogram._data)
+        d_max = np.max(self.spectrogram._data)
         d_diff = d_max - d_min
         low = ((low/100) * d_diff) + d_min
         high = ((high/100) * d_diff) + d_min
