@@ -485,9 +485,10 @@ class MainWindow(QMainWindow):
 
                 ann_groups = sm.ODS.get_annotations()
 
-                for ann_group in ann_groups.items():
-                    self.annotations.add_annotation_set(ann_group[1],
-                                                        ann_group[0])
+                if ann_groups is not None:
+                    for ann_group in ann_groups.items():
+                        self.annotations.add_annotation_set(ann_group[1],
+                                                            ann_group[0])
 
         # Fork for buffer usage
         if CONF.get('data_management', 'use_memory_buffer'):
