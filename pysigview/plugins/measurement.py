@@ -158,7 +158,6 @@ class SignalWidget(QWidget):
             self.spectrum_yaxis.axis._axis_label.text = 'Frequency [Hz]'
             self.spectrum_view.camera = self.spectrogram_camera
 
-
         self.update_signals()
 
     def recieve_input(self, event):
@@ -319,17 +318,14 @@ class SignalWidget(QWidget):
             scale = [s_x, s_y, s_z]
             self.spectrogram.transform = STTransform(scale)
 
-            # Adjust camera limits
-            pos = (0, 0)
-            size = (len(data) * 10 / self.curr_pc.fsamp, freqs[-1])
-            self.spectrogram_camera.limit_rect = pos, size
-
             # Adjust camera view
             freqs = freqs[low_lim_idx:high_lim_idx-1]
             pos = (0, freqs[0])
             size = (len(data) / self.curr_pc.fsamp, freqs[-1] - freqs[0])
             self.spectrogram_camera.rect = pos, size
 
+            # Adjust camera limits
+            self.spectrogram_camera.limit_rect = pos, size
 
 class GeneralTools(QWidget):
 
