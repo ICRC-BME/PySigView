@@ -148,12 +148,16 @@ class SignalWidget(QWidget):
             self.spectrum_line.visible = True
             self.spectrogram.visible = False
             self.spectrum_xaxis.axis._axis_label.text = 'Frequency [Hz]'
+            self.spectrum_yaxis.axis._axis_label.text = 'Amplitude'
             self.spectrum_view.camera = self.spectrum_camera
+
         elif stype == 'spectrogram':
             self.spectrogram.visible = True
             self.spectrum_line.visible = False
             self.spectrum_xaxis.axis._axis_label.text = 'Time [s]'
+            self.spectrum_yaxis.axis._axis_label.text = 'Frequency [Hz]'
             self.spectrum_view.camera = self.spectrogram_camera
+
 
         self.update_signals()
 
