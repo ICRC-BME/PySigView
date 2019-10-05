@@ -61,7 +61,6 @@ class SignalWidget(QWidget):
 
         # Setup camera
         self.signal_camera = SignalCamera()
-        self.spectrogram_camera = SignalCamera()
         self.spectrum_camera = SignalCamera()
 
         self.canvas = scene.SceneCanvas(show=True, keys='interactive',
@@ -149,14 +148,12 @@ class SignalWidget(QWidget):
             self.spectrogram.visible = False
             self.spectrum_xaxis.axis._axis_label.text = 'Frequency [Hz]'
             self.spectrum_yaxis.axis._axis_label.text = 'Amplitude'
-            self.spectrum_view.camera = self.spectrum_camera
 
         elif stype == 'spectrogram':
             self.spectrogram.visible = True
             self.spectrum_line.visible = False
             self.spectrum_xaxis.axis._axis_label.text = 'Time [s]'
             self.spectrum_yaxis.axis._axis_label.text = 'Frequency [Hz]'
-            self.spectrum_view.camera = self.spectrogram_camera
 
         self.update_signals()
 
@@ -322,10 +319,10 @@ class SignalWidget(QWidget):
             freqs = freqs[low_lim_idx:high_lim_idx-1]
             pos = (0, freqs[0])
             size = (len(data) / self.curr_pc.fsamp, freqs[-1] - freqs[0])
-            self.spectrogram_camera.rect = pos, size
+            self.spectrum_camera.rect = pos, size
 
             # Adjust camera limits
-            self.spectrogram_camera.limit_rect = pos, size
+            self.spectrum_camera.limit_rect = pos, size
 
 class GeneralTools(QWidget):
 
