@@ -35,8 +35,8 @@ class DataMap:
     def __init__(self):
         super(DataMap, self).__init__()
 
-        self._map = np.array([], dtype=[('channels', object, 1),
-                                        ('ch_set', np.bool, 1),
+        self._map = np.array([], dtype=[('channels', object),
+                                        ('ch_set', np.bool),
                                         ('uutc_ss', np.int64, 2)])
 
     def __getitem__(self, item):

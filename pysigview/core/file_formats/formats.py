@@ -23,7 +23,7 @@ United States
 # Local imports
 from .mefd import mefdHandler
 from .d import dHandler
-
+from .h5 import h5Handler
 
 def extension_evaluator(path):
     """
@@ -39,7 +39,6 @@ def extension_evaluator(path):
     extension = path[path.rindex('.'):]
 
     formats = get_available_file_formats()
-
     file_handler = [x for x in formats if x.extension == extension][0]
 
     if file_handler == []:
@@ -56,6 +55,6 @@ def get_available_file_formats():
     """
 
     # TODO do this automatically in the future
-    supported_file_formats = [mefdHandler(), dHandler()]
+    supported_file_formats = [mefdHandler(), dHandler(), h5Handler()]
 
     return supported_file_formats

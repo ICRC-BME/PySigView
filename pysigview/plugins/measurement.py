@@ -61,7 +61,6 @@ class SignalWidget(QWidget):
 
         # Setup camera
         self.signal_camera = SignalCamera()
-        self.spectrogram_camera = SignalCamera()
         self.spectrum_camera = SignalCamera()
 
         self.canvas = scene.SceneCanvas(show=True, keys='interactive',
@@ -147,13 +146,14 @@ class SignalWidget(QWidget):
         if stype == 'spectrum':
             self.spectrum_line.visible = True
             self.spectrogram.visible = False
-            self.spectrum_xaxis.axis._axis_label.text = 'Frequency [Hz]'
-            self.spectrum_view.camera = self.spectrum_camera
+            self.spectrum_xaxis.axis.axis_label = 'Frequency [Hz]'
+            self.spectrum_yaxis.axis.axis_label = 'Amplitude'
+
         elif stype == 'spectrogram':
             self.spectrogram.visible = True
             self.spectrum_line.visible = False
-            self.spectrum_xaxis.axis._axis_label.text = 'Time [s]'
-            self.spectrum_view.camera = self.spectrogram_camera
+            self.spectrum_xaxis.axis.axis_label = 'Time [s]'
+            self.spectrum_yaxis.axis.axis_label = 'Frequency [Hz]'
 
         self.update_signals()
 
@@ -315,17 +315,14 @@ class SignalWidget(QWidget):
             scale = [s_x, s_y, s_z]
             self.spectrogram.transform = STTransform(scale)
 
-            # Adjust camera limits
-            pos = (0, 0)
-            size = (len(data) * 10 / self.curr_pc.fsamp, freqs[-1])
-            self.spectrogram_camera.limit_rect = pos, size
-
             # Adjust camera view
             freqs = freqs[low_lim_idx:high_lim_idx-1]
             pos = (0, freqs[0])
             size = (len(data) / self.curr_pc.fsamp, freqs[-1] - freqs[0])
-            self.spectrogram_camera.rect = pos, size
+            self.spectrum_camera.rect = pos, size
 
+            # Adjust camera limits
+            self.spectrum_camera.limit_rect = pos, size
 
 class GeneralTools(QWidget):
 
@@ -526,11 +523,11 @@ class SpectrogramTools(QWidget):
         # Adjust text
         self.clim_low_le.setText(str(low))
 
-        if self.spectrogram.data is None:
+        if self.spectrogram._data is None:
             return
 
-        d_min = np.min(self.spectrogram.data)
-        d_max = np.max(self.spectrogram.data)
+        d_min = np.min(self.spectrogram._data)
+        d_max = np.max(self.spectrogram._data)
         d_diff = d_max - d_min
         low = ((low/100) * d_diff) + d_min
         high = ((high/100) * d_diff) + d_min
@@ -546,11 +543,11 @@ class SpectrogramTools(QWidget):
         # Adjust text
         self.clim_high_le.setText(str(high))
 
-        if self.spectrogram.data is None:
+        if self.spectrogram._data is None:
             return
 
-        d_min = np.min(self.spectrogram.data)
-        d_max = np.max(self.spectrogram.data)
+        d_min = np.min(self.spectrogram._data)
+        d_max = np.max(self.spectrogram._data)
         d_diff = d_max - d_min
         low = ((low/100) * d_diff) + d_min
         high = ((high/100) * d_diff) + d_min
