@@ -69,13 +69,13 @@ class mefdHandler(FileDataSource):
         self.recording_info['nchan'] = len(channel_list)
 
         dmap = np.zeros(len(channel_list),
-                        dtype=[('fsamp', np.float, 1),
-                               ('nsamp', np.int32, 1),
-                               ('ufact', np.float, 1),
-                               ('unit', np.object, 1),
-                               ('channels', np.object, 1),
-                               ('discontinuities', np.ndarray, 1),
-                               ('ch_set', np.bool, 1),
+                        dtype=[('fsamp', np.float),
+                               ('nsamp', np.int32),
+                               ('ufact', np.float),
+                               ('unit', np.object),
+                               ('channels', np.object),
+                               ('discontinuities', np.ndarray),
+                               ('ch_set', np.bool),
                                ('uutc_ss', np.int64, 2)])
 
         for i, channel in enumerate(channel_list):
