@@ -24,7 +24,7 @@ from PyQt5.QtGui import QIntValidator, QDoubleValidator
 from PyQt5.QtWidgets import (QVBoxLayout, QWidget, QComboBox, QLineEdit,
                              QCheckBox, QFormLayout, QHBoxLayout, QSlider)
 from vispy import scene, color
-from vispy.scene import Line, AxisWidget
+from vispy.scene import Line, AxisWidget, Spectrogram
 from vispy.visuals.transforms import STTransform
 
 # Local imports
@@ -32,7 +32,6 @@ from pysigview.config.main import CONF
 
 from pysigview.plugins.base import BasePluginWidget
 from pysigview.cameras.signal_camera import SignalCamera
-from pysigview.visuals.spectrogram_visual import Spectrogram
 
 
 class SignalWidget(QWidget):

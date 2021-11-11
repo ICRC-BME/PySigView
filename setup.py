@@ -131,7 +131,7 @@ if os.name == 'nt':
 # =============================================================================
 
 setup_args = dict(name='pysigview',
-                  version='0.0.0b2',
+                  version='0.0.0a1',
                   description='Package for viewing signals using VisPy',
                   url='https://github.com/ICRC-BME/PySigView',
                   author='Jan Cimbalnik',
@@ -140,7 +140,7 @@ setup_args = dict(name='pysigview',
                   license='Apache 2.0',
                   packages=get_packages(),
                   package_data={LIBNAME: get_package_data(LIBNAME, EXTLIST)},
-                  platforms=['Linux', 'MacOS'],
+                  platforms=['Linux', 'MacOS', 'Windows'],
                   keywords='PyQt5 vispy signal',
                   install_requires=['pyqt5', 'numpy', 'vispy',
                                     'pyopengl', 'pandas', 'scipy', 'bcolz',
