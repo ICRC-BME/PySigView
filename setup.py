@@ -131,7 +131,7 @@ if os.name == 'nt':
 # =============================================================================
 
 setup_args = dict(name='pysigview',
-                  version='0.0.0b2',
+                  version='0.0.0a1',
                   description='Package for viewing signals using VisPy',
                   url='https://github.com/ICRC-BME/PySigView',
                   author='Jan Cimbalnik',
