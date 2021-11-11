@@ -1,0 +1,45 @@
+
+name: Deploy PySigView
+
+on: [push, pull_request]
+
+jobs:
+  release:
+    if: contains(github.ref, 'refs/tags/')
+
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        include:
+            - os: ubuntu-latest
+              python-version: '3.9'
+
+    steps:
+
+    - uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install setuptools
+        pip install wheel
+        pip install twine
+
+    - name: Build wheels 
+      run: |
+        python setup.py sdist bdist_wheel
+
+    - name: Publish package
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      run: |
+        twine upload --skip-existing dist/pysigview*
+
+
