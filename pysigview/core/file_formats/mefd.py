@@ -185,7 +185,8 @@ class mefdHandler(FileDataSource):
         channel_map = data_map.get_active_channels()
         uutc_map = data_map.get_active_uutc_ss()
 
-        data = self.session.read_ts_channels_uutc(channel_map, uutc_map)
+        data = self.session.read_ts_channels_uutc(channel_map, uutc_map,
+                                                  out_nans=True)
 
         data_out = np.empty(len(data_map), object)
         for i in range(len(data_map)):
