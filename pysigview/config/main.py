@@ -52,11 +52,11 @@ DEFAULTS = {'DEFAULTS': {'enable': True
                      'window/is_fullscreen': False,
                      'window/prefs_dialog_size': (745, 411)
                      },
-            'data_management': {'use_memory_buffer': False,
-                                'use_disk_buffer': False,
-                                'n_chunks_before': 1,
-                                'n_chunks_after': 1,
-                                },
+            # 'data_management': {'use_memory_buffer': False,
+            #                     'use_disk_buffer': False,
+            #                     'n_chunks_before': 1,
+            #                     'n_chunks_after': 1,
+            #                     },
             'signal_display': {'n_cols': 1,
                                'plot_method': 'gl',  # gl or agg
                                'bgcolor': '#606060ff',
@@ -101,7 +101,7 @@ DEFAULTS = {'DEFAULTS': {'enable': True
                           },
             }
 
-CONF_VERSION = '0.6.0'
+CONF_VERSION = '0.7.0'
 
 # Main configuration instance
 try:

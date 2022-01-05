@@ -451,8 +451,8 @@ class NavigationBar(BasePluginWidget):
                                           - self.ri['recording_start'])
 
         # Buffer bars
-        if CONF.get('data_management', 'use_memory_buffer'):
-            sm.PDS.state_changed.connect(self.bar_widget.update_buffer_bar)
+        # if CONF.get('data_management', 'use_memory_buffer'):
+        #     sm.PDS.state_changed.connect(self.bar_widget.update_buffer_bar)
 
 #        self.bar_widget.plot_disconts()
 
