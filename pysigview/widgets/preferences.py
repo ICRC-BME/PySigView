@@ -9,8 +9,8 @@ from PyQt5.QtWidgets import (QListWidget, QStackedWidget, QCheckBox,
 from PyQt5.QtGui import QIntValidator
 
 # Local imports
-from pysigview.core import source_manager as sm
-from pysigview.core.buffer_handler import MemoryBuffer
+# from pysigview.core import source_manager as sm
+# from pysigview.core.buffer_handler import MemoryBuffer
 
 from pysigview.utils.qthelpers import hex2rgba, rgba2hex
 from pysigview.config.main import CONF
@@ -76,32 +76,32 @@ class Preferences(QDialog):
     def apply_changes(self):
 
         # ----- Main -----
-        source_opened = sm.ODS.recording_info is not None
-        if len(self.preferences_changed['data_management']) and source_opened:
-            dm_prefs = self.preferences_changed['data_management']
+        # source_opened = sm.ODS.recording_info is not None
+        # if len(self.preferences_changed['data_management']) and source_opened:
+        #     dm_prefs = self.preferences_changed['data_management']
 
-            # TODO: do not address navigation bar directly
-            if 'use_memory_buffer' in dm_prefs:
-                if dm_prefs['use_memory_buffer'] is True:
-                    sm.PDS = MemoryBuffer(self.main)
-                    sm.PDS.state_changed.connect(self.main.navigation_bar.
-                                                 bar_widget.update_buffer_bar)
-                    sm.PDS.apply_settings()
-                else:
-                    sm.PDS.state_changed.disconnect()
-                    sm.PDS.terminate_buffer()
-                    sm.PDS.terminate_monitor_thread()
-                    sm.PDS.purge_data()
-                    self.main.signal_display.data_map_changed. \
-                        disconnect(sm.PDS.update)
-                    # TODO: create reset data for navigation bar bars
-                    self.main.navigation_bar.bar_widget.buffer_bar. \
-                        set_data([0, 0])
-                    self.main.navigation_bar.bar_widget.buffer_bar.update()
-                    sm.PDS = sm.ODS
+        #     # TODO: do not address navigation bar directly
+        #     if 'use_memory_buffer' in dm_prefs:
+        #         if dm_prefs['use_memory_buffer'] is True:
+        #             sm.PDS = MemoryBuffer(self.main)
+        #             sm.PDS.state_changed.connect(self.main.navigation_bar.
+        #                                          bar_widget.update_buffer_bar)
+        #             sm.PDS.apply_settings()
+        #         else:
+        #             sm.PDS.state_changed.disconnect()
+        #             sm.PDS.terminate_buffer()
+        #             sm.PDS.terminate_monitor_thread()
+        #             sm.PDS.purge_data()
+        #             self.main.signal_display.data_map_changed. \
+        #                 disconnect(sm.PDS.update)
+        #             # TODO: create reset data for navigation bar bars
+        #             self.main.navigation_bar.bar_widget.buffer_bar. \
+        #                 set_data([0, 0])
+        #             self.main.navigation_bar.bar_widget.buffer_bar.update()
+        #             sm.PDS = sm.ODS
 
-            elif isinstance(sm.PDS, MemoryBuffer):
-                sm.PDS.apply_settings()
+        #     elif isinstance(sm.PDS, MemoryBuffer):
+        #         sm.PDS.apply_settings()
 
         # ----- Signal display -----
         if len(self.preferences_changed['signal_display']):

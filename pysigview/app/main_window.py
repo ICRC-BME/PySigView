@@ -57,7 +57,7 @@ from pysigview.core.file_formats.formats import extension_evaluator
 from pysigview.core.clients.clients import client_type_evaluator
 
 from pysigview.core import source_manager as sm
-from pysigview.core.buffer_handler import MemoryBuffer
+# from pysigview.core.buffer_handler import MemoryBuffer
 from pysigview.core.thread_workers import TimerWorker
 from pysigview.config.utils import get_image_path, get_home_dir
 
@@ -460,10 +460,10 @@ class MainWindow(QMainWindow):
         # ----- Delete previous data -----
 
         # Delete any previous buffers
-        if isinstance(sm.PDS, MemoryBuffer):
-            sm.PDS.terminate_buffer()
-            sm.PDS.terminate_monitor_thread()
-            sm.PDS.purge_data()
+        # if isinstance(sm.PDS, MemoryBuffer):
+        #     sm.PDS.terminate_buffer()
+        #     sm.PDS.terminate_monitor_thread()
+        #     sm.PDS.purge_data()
 
         # Delete data from plugins to be able to open new data source
         for plugin in self.plugin_list:
@@ -491,10 +491,10 @@ class MainWindow(QMainWindow):
                                                             ann_group[0])
 
         # Fork for buffer usage
-        if CONF.get('data_management', 'use_memory_buffer'):
-            sm.PDS = MemoryBuffer(self)
-        else:
-            sm.PDS = sm.ODS
+        # if CONF.get('data_management', 'use_memory_buffer'):
+        #     sm.PDS = MemoryBuffer(self)
+        # else:
+        sm.PDS = sm.ODS
 
         self.statusBar().showMessage('')
 
@@ -599,10 +599,10 @@ class MainWindow(QMainWindow):
         # ----- Delete previous data -----
 
         # Delete any previous buffers
-        if isinstance(sm.PDS, MemoryBuffer):
-            sm.PDS.terminate_buffer()
-            sm.PDS.terminate_monitor_thread()
-            sm.PDS.purge_data()
+        # if isinstance(sm.PDS, MemoryBuffer):
+        #     sm.PDS.terminate_buffer()
+        #     sm.PDS.terminate_monitor_thread()
+        #     sm.PDS.purge_data()
 
         # Delete data from plugins to be able to open new data source
         for plugin in self.plugin_list:
@@ -630,10 +630,10 @@ class MainWindow(QMainWindow):
 
         # Fork for buffer usage
 
-        if CONF.get('data_management', 'use_memory_buffer'):
-            sm.PDS = MemoryBuffer(self)
-        else:
-            sm.PDS = sm.ODS
+        # if CONF.get('data_management', 'use_memory_buffer'):
+        #     sm.PDS = MemoryBuffer(self)
+        # else:
+        sm.PDS = sm.ODS
 
         self.source_opened = True
         self.add_path_to_title()
@@ -955,10 +955,10 @@ class MainWindow(QMainWindow):
 #        if self.toolbars_visible:
 #            self.save_visible_toolbars()
 
-        if isinstance(sm.PDS, MemoryBuffer):
-            sm.PDS.terminate_buffer()
-            sm.PDS.terminate_monitor_thread()
-            sm.PDS.purge_data()
+        # if isinstance(sm.PDS, MemoryBuffer):
+        #     sm.PDS.terminate_buffer()
+        #     sm.PDS.terminate_monitor_thread()
+        #     sm.PDS.purge_data()
 
         self.already_closed = True
         return True
